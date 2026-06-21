@@ -56,19 +56,19 @@ COL_OBS = 11
 # Menus
 MENU_CATEGORIA = (
     "O que voce esta buscando, {apelido}? \U0001f60a\n\n"
-    "1 - Seguros\n"
-    "2 - Solucoes Financeiras\n\n"
+    "1 - Plano de Saude e Odontologico\n"
+    "2 - Seguros\n"
+    "3 - Solucoes Financeiras\n\n"
     "Responda com o numero da opcao."
 )
 
 MENU_SEGUROS = (
     "Otimo, {apelido}! Qual tipo de seguro?\n\n"
-    "1 - Saude e Odontologico\n"
-    "2 - Veiculo\n"
-    "3 - Vida\n"
-    "4 - Residencia\n"
-    "5 - Equipamentos Portateis\n"
-    "6 - Viagem\n\n"
+    "1 - Veiculo\n"
+    "2 - Vida\n"
+    "3 - Residencia\n"
+    "4 - Equipamentos Portateis\n"
+    "5 - Viagem\n\n"
     "Responda com o numero da opcao."
 )
 
@@ -83,12 +83,11 @@ MENU_FINANCEIRO = (
 )
 
 PRODUTOS_SEGUROS = {
-    "1": "Saude e Odontologico",
-    "2": "Veiculo",
-    "3": "Vida",
-    "4": "Residencia",
-    "5": "Equipamentos Portateis",
-    "6": "Viagem",
+    "1": "Veiculo",
+    "2": "Vida",
+    "3": "Residencia",
+    "4": "Equipamentos Portateis",
+    "5": "Viagem",
 }
 
 PRODUTOS_FINANCEIRO = {
@@ -163,75 +162,68 @@ def processar_desconhecido(from_jid: str, telefone: str, texto: str):
     if etapa == "aguarda_nome":
         apelido = texto.strip().split()[0].capitalize()
         CONVERSAS[telefone]["apelido"] = apelido
-        CONVERSAS[telefone]["etapa"] = "aguarda_telefone"
+        CONVERSAS[telefone]["etapa"] = "aguarda_categoria"
         enviar_resposta(
             from_jid,
-            f"Prazer, {apelido}! \U0001f60a\n\nQual o melhor numero para te contatar?"
+            f"Prazer, {apelido}! \U0001f60a\n\n" + MENU_CATEGORIA.format(apelido=apelido)
         )
-        return
-
-    if etapa == "aguarda_telefone":
-        apelido = estado.get("apelido", "")
-        CONVERSAS[telefone]["telefone_informado"] = texto
-        CONVERSAS[telefone]["etapa"] = "aguarda_categoria"
-        enviar_resposta(from_jid, MENU_CATEGORIA.format(apelido=apelido))
         return
 
     if etapa == "aguarda_categoria":
         apelido = estado.get("apelido", "")
         if texto == "1":
+            # Plano de Saude e Odontologico -> atendimento interno
+            enviar_resposta(
+                from_jid,
+                f"Otima escolha, {apelido}! \U0001f60a\n\n"
+                f"Nossa equipe especializada em *Plano de Saude e Odontologico* vai entrar em contato com voce em breve.\n\n"
+                f"Fique a vontade para perguntar qualquer coisa por aqui!"
+            )
+            registrar_lead_desconhecido(telefone, estado, "Plano de Saude e Odontologico", "saude_interno")
+            log.info(f" {apelido} ({telefone}) - Saude/Odonto -> ATENDIMENTO INTERNO")
+            del CONVERSAS[telefone]
+        elif texto == "2":
             CONVERSAS[telefone]["categoria"] = "seguros"
             CONVERSAS[telefone]["etapa"] = "aguarda_produto_seguro"
             enviar_resposta(from_jid, MENU_SEGUROS.format(apelido=apelido))
-        elif texto == "2":
+        elif texto == "3":
             CONVERSAS[telefone]["categoria"] = "financeiro"
             CONVERSAS[telefone]["etapa"] = "aguarda_produto_financeiro"
             enviar_resposta(from_jid, MENU_FINANCEIRO.format(apelido=apelido))
         else:
             enviar_resposta(
                 from_jid,
-                f"Por favor, {apelido}, responda apenas com *1* ou *2*. \U0001f60a\n\n"
+                f"Por favor, {apelido}, responda apenas com *1*, *2* ou *3*. \U0001f60a\n\n"
                 + MENU_CATEGORIA.format(apelido=apelido)
             )
         return
 
     if etapa == "aguarda_produto_seguro":
         apelido = estado.get("apelido", "")
-        tel_cliente = estado.get("telefone_informado", telefone)
+        tel_cliente = telefone
         produto = PRODUTOS_SEGUROS.get(texto)
 
         if not produto:
             enviar_resposta(
                 from_jid,
-                f"Por favor, {apelido}, responda com um numero de 1 a 6. \U0001f60a\n\n"
+                f"Por favor, {apelido}, responda com um numero de 1 a 5. \U0001f60a\n\n"
                 + MENU_SEGUROS.format(apelido=apelido)
             )
             return
 
-        if texto == "1":
-            enviar_resposta(
-                from_jid,
-                f"Otima escolha, {apelido}! \U0001f60a\n\n"
-                f"Nossa equipe especializada em *Saude e Odontologico* vai entrar em contato com voce em breve.\n\n"
-                f"Fique a vontade para perguntar qualquer coisa por aqui!"
-            )
-            registrar_lead_desconhecido(telefone, estado, produto, "saude_interno")
-            log.info(f" {apelido} ({telefone}) - Saude/Odonto -> ATENDIMENTO INTERNO")
-        else:
-            enviar_resposta(
-                from_jid,
-                f"*{RODRIGO_NOME}* e especialista em *{produto}* e vai entrar em contato com voce em breve, {apelido}! \U0001f60a\n\n"
-                f"Caso prefira, pode chama-lo diretamente: (21) 98854-1324"
-            )
-            notificar_rodrigo(apelido, tel_cliente, produto)
-            registrar_lead_desconhecido(telefone, estado, produto, "rodrigo")
-
+        enviar_resposta(
+            from_jid,
+            f"*{RODRIGO_NOME}* e especialista em *{produto}* e vai entrar em contato com voce em breve, {apelido}! \U0001f60a\n\n"
+            f"Caso prefira, pode chama-lo diretamente: (21) 98854-1324"
+        )
+        notificar_rodrigo(apelido, tel_cliente, produto)
+        registrar_lead_desconhecido(telefone, estado, produto, "rodrigo")
         del CONVERSAS[telefone]
         return
 
     if etapa == "aguarda_produto_financeiro":
         apelido = estado.get("apelido", "")
-        tel_cliente = estado.get("telefone_informado", telefone)
+        tel_cliente = telefone
         produto = PRODUTOS_FINANCEIRO.get(texto)
 
         if not produto:
@@ -258,7 +250,6 @@ def registrar_lead_desconhecido(telefone: str, estado: dict, produto: str, desti
         return
     try:
         apelido = estado.get("apelido", "")
-        tel_inform = estado.get("telefone_informado", telefone)
         wb = openpyxl.load_workbook(ARQUIVO_LEADS)
         ws = wb["Leads"]
         nova_linha = ws.max_row + 1
@@ -266,7 +257,7 @@ def registrar_lead_desconhecido(telefone: str, estado: dict, produto: str, desti
         ws.cell(nova_linha, COL_TELEFONE).value = telefone
         ws.cell(nova_linha, COL_STATUS).value = STATUS_INTERESSADO
         ws.cell(nova_linha, COL_HORA_R).value = datetime.now().strftime("%d/%m/%Y %H:%M")
-        obs = f"[INBOUND] Produto: {produto} | Tel informado: {tel_inform} | Encaminhado: {destino.upper()}"
+        obs = f"[INBOUND] Produto: {produto} | Tel: {telefone} | Encaminhado: {destino.upper()}"
         ws.cell(nova_linha, COL_OBS).value = obs
         atualizar_dashboard(wb)
         wb.save(ARQUIVO_LEADS)

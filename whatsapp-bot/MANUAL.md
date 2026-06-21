@@ -208,14 +208,17 @@ O sistema não te manda um alerta ativo (isso pode ser adicionado, se quiser).
 ## 11. Triagem de contatos novos (quem chama primeiro)
 
 Se alguém que **não está na planilha** manda mensagem, o webhook conduz um
-menu interativo:
+menu interativo (usa o próprio número do WhatsApp da pessoa — **não** pede
+telefone):
 
 1. Pergunta o **nome**
-2. Pergunta o **telefone**
-3. Pergunta a **categoria**: 1) Seguros · 2) Soluções Financeiras
-4. Pergunta o **produto** específico
-5. **Saúde/Odontológico** → atendimento interno · **demais produtos** → avisa o
-   Rodrigo e passa o contato dele
+2. Pergunta a **categoria**:
+   - **1) Plano de Saúde e Odontológico** → atendimento interno (você/Queiroz)
+   - **2) Seguros** → Veículo, Vida, Residência, Equipamentos Portáteis, Viagem → Rodrigo
+   - **3) Soluções Financeiras** → Consórcio, Financiamento, Previdência, Resp. Civil, Seguro de Vida → Rodrigo
+3. Pergunta o **produto** específico (para Seguros e Soluções Financeiras)
+4. Encaminha: Saúde fica interno; os demais **avisam o Rodrigo** por WhatsApp e
+   passam o contato dele
 
 O contato é registrado na planilha como `interessado`, com observação `[INBOUND]`.
 
