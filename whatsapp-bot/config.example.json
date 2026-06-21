@@ -36,14 +36,30 @@
   },
 
   "faq": {
-    "_instrucao": "Personalize as respostas com os valores reais da corretora. Os 'gatilhos' sao palavras que ativam cada resposta.",
+    "_instrucao": "Personalize as respostas com os dados reais da corretora. Os 'gatilhos' sao palavras que ativam cada resposta. [CIDADE] e trocado automaticamente pela cidade do lead. NAO use como gatilho palavras que estao em 'palavras_recusa' (ex: cancelar, pare) — elas marcam recusa antes de chegar na FAQ.",
     "preco": {
-      "gatilhos": ["quanto custa", "qual o valor", "preço", "preco", "valor", "mensalidade", "caro", "barato"],
-      "resposta": "Os valores variam conforme a faixa etária e a cobertura escolhida.\n\nTemos opções a partir de:\n• Pessoa física: a partir de R$ [VALOR]\n• PME (empresa): depende do número de vidas\n\nPosso preparar uma simulação personalizada sem compromisso? Só me confirma sua idade aproximada."
+      "gatilhos": ["quanto custa", "qual o valor", "preço", "preco", "valor", "mensalidade", "quanto fica", "caro", "barato", "orçamento", "orcamento"],
+      "resposta": "Os valores variam conforme a faixa etária e a cobertura escolhida. 😊\n\nPara fazer uma simulação certinha pra você, me confirma:\n• Sua idade (ou as idades de quem vai usar o plano)\n• Se é individual, familiar ou empresarial (MEI/PME)\n\nCom isso eu preparo uma proposta sem compromisso!"
     },
     "rede": {
-      "gatilhos": ["rede credenciada", "hospital", "qual hospital", "clinica", "clínica", "exame", "especialista"],
-      "resposta": "Boa pergunta! A rede credenciada varia por operadora e por plano.\n\nAssim que identificarmos a melhor opção para o seu perfil, verificamos juntos se seus médicos e hospitais preferidos estão na rede.\n\nVocê tem algum hospital ou médico de referência aqui em [CIDADE]?"
+      "gatilhos": ["rede credenciada", "hospital", "qual hospital", "clinica", "clínica", "exame", "especialista", "laboratorio", "laboratório", "atende em"],
+      "resposta": "Boa pergunta! A rede credenciada varia por operadora e por plano.\n\nMe conta quais hospitais, laboratórios ou médicos são importantes pra você aqui em [CIDADE] que eu verifico em quais planos eles estão na rede. 🏥"
+    },
+    "carencia": {
+      "gatilhos": ["carencia", "carência", "quanto tempo", "prazo", "quando posso usar", "ja posso usar", "já posso usar"],
+      "resposta": "A carência é o tempo de espera até poder usar cada serviço. Em geral:\n• Urgência e emergência: 24 horas\n• Consultas e exames simples: até 30 dias\n• Procedimentos mais complexos e partos: prazos maiores\n\nEm alguns casos, quem já tem plano consegue redução ou isenção de carência. Você tem plano atualmente?"
+    },
+    "documentos": {
+      "gatilhos": ["documento", "documentos", "o que preciso", "como contratar", "como faço", "como faco", "contratar", "contratação", "contratacao"],
+      "resposta": "A contratação é simples e rápida! Normalmente pedimos:\n• Documento com foto (RG/CNH) e CPF\n• Comprovante de residência\n• Para MEI/empresa: o CNPJ\n\nEu te acompanho em cada passo. Quer que eu já inicie a sua proposta?"
+    },
+    "dependentes": {
+      "gatilhos": ["dependente", "dependentes", "familia", "família", "esposa", "marido", "filho", "filhos", "incluir"],
+      "resposta": "Sim! Dá pra incluir dependentes como cônjuge e filhos no mesmo plano, normalmente com valores especiais por pessoa. 👨‍👩‍👧\n\nQuantas pessoas você gostaria de incluir e quais as idades? Assim já calculo certinho."
+    },
+    "reembolso": {
+      "gatilhos": ["reembolso", "reembolsa", "fora da rede", "particular", "consultar com meu medico", "meu médico"],
+      "resposta": "Alguns planos oferecem reembolso para consultas e procedimentos fora da rede, com limites por tabela. 💳\n\nSe esse ponto é importante pra você, eu separo as opções com reembolso. Quer que eu inclua isso na sua proposta?"
     }
   },
 
