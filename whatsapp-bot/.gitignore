@@ -1,0 +1,18 @@
+# ── Segredos / configuração local (contém a api_key real) ──
+config.json
+.env
+
+# ── Dados de clientes / leads — NÃO versionar (LGPD) ──
+leads.xlsx
+chats.json
+*.xlsx
+
+# ── Logs ──
+*.log
+
+# ── Python ──
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/

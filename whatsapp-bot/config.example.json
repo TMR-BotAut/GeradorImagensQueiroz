@@ -1,0 +1,61 @@
+{
+  "_instrucoes": {
+    "1_copie": "Copie este arquivo para config.json e preencha os valores reais. O config.json fica fora do Git (.gitignore).",
+    "2_waha": "WAHA rodando via Docker em http://localhost:3000",
+    "3_webhook": "No WAHA Dashboard: Settings -> Webhooks -> URL: http://localhost:5000/webhook -> evento: message",
+    "4_telefones": "Telefones na planilha no formato 5521999999999 (55 + DDD + numero, sem espacos)",
+    "5_api_key": "Coloque a api_key real apenas no config.json local. NUNCA commite a chave.",
+    "6_modo_teste": "Com modo_teste.ativo=true: ignora dia/horario e limita os envios. Use durante os testes; em producao deixe false."
+  },
+
+  "waha": {
+    "url": "http://localhost:3000",
+    "sessao": "default",
+    "api_key": ""
+  },
+
+  "modo_teste": {
+    "ativo": true,
+    "max_envios": 2,
+    "ignorar_dia_horario": true
+  },
+
+  "campanha": {
+    "arquivo_leads": "leads.xlsx",
+    "limite_min_por_dia": 11,
+    "limite_max_por_dia": 17,
+    "hora_inicio_envio": "10:00",
+    "hora_fim_envio": "15:30",
+    "dias_para_recontato": 12,
+    "max_tentativas": 2
+  },
+
+  "mensagem": {
+    "inicial": "Olá, {nome}! Tudo bem?\n\nMeu nome é [SEU NOME] e trabalho com planos de saúde na região de {cidade}.\n\nGostaria de apresentar algumas opções de cobertura que podem fazer sentido pra você — de forma rápida e sem compromisso.\n\nPosso compartilhar as informações?",
+    "recontato": "Olá, {nome}! Passando novamente para ver se conseguimos um momento. Trabalho com planos de saúde em {cidade} e tenho opções acessíveis. Posso te contar mais?"
+  },
+
+  "faq": {
+    "_instrucao": "Personalize as respostas com os valores reais da corretora. Os 'gatilhos' sao palavras que ativam cada resposta.",
+    "preco": {
+      "gatilhos": ["quanto custa", "qual o valor", "preço", "preco", "valor", "mensalidade", "caro", "barato"],
+      "resposta": "Os valores variam conforme a faixa etária e a cobertura escolhida.\n\nTemos opções a partir de:\n• Pessoa física: a partir de R$ [VALOR]\n• PME (empresa): depende do número de vidas\n\nPosso preparar uma simulação personalizada sem compromisso? Só me confirma sua idade aproximada."
+    },
+    "rede": {
+      "gatilhos": ["rede credenciada", "hospital", "qual hospital", "clinica", "clínica", "exame", "especialista"],
+      "resposta": "Boa pergunta! A rede credenciada varia por operadora e por plano.\n\nAssim que identificarmos a melhor opção para o seu perfil, verificamos juntos se seus médicos e hospitais preferidos estão na rede.\n\nVocê tem algum hospital ou médico de referência aqui em [CIDADE]?"
+    }
+  },
+
+  "palavras_recusa": [
+    "não quero", "nao quero", "não tenho interesse", "nao tenho interesse",
+    "não preciso", "nao preciso", "pare", "remova", "bloquear", "block",
+    "chega", "stop", "cancelar", "descadastrar", "me tire da lista"
+  ],
+
+  "palavras_interesse": [
+    "quero", "sim", "pode", "manda", "me manda", "quanto", "valor", "preço", "preco",
+    "interesse", "interessado", "interessada", "gostaria", "como funciona",
+    "me liga", "pode ligar", "vou querer", "dependentes", "familia"
+  ]
+}
