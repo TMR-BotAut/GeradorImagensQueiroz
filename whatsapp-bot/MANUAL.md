@@ -57,17 +57,35 @@ pip install -r requirements.txt
 
 ### 4.2. Subir o WAHA (a ponte com o WhatsApp)
 
+> ⚠️ **Lição aprendida (importante!):** as versões atuais do WAHA vêm com
+> **duas travas de segurança ligadas por padrão** — um **login/senha** no
+> Dashboard e uma **chave de API** (`API Key`) para enviar mensagens. Se você
+> subir o WAHA "pelado" (sem definir esses valores), o envio falha com o erro
+> **`401 Unauthorized`** — e fica difícil de descobrir o motivo. Por isso, suba
+> o WAHA **já definindo** valores conhecidos:
+
 ```bash
-docker run -it --rm -p 3000:3000 devlikeapro/waha
+docker run -it --rm -p 3000:3000 ^
+  -e WHATSAPP_API_KEY=queiroz2026 ^
+  -e WAHA_DASHBOARD_USERNAME=admin ^
+  -e WAHA_DASHBOARD_PASSWORD=queiroz2026 ^
+  devlikeapro/waha
 ```
 
-Isso deixa o WAHA disponível em `http://localhost:3000`.
+> No **Windows (cmd)**, rode tudo em **uma linha só** (sem os `^`):
+> `docker run -it --rm -p 3000:3000 -e WHATSAPP_API_KEY=queiroz2026 -e WAHA_DASHBOARD_USERNAME=admin -e WAHA_DASHBOARD_PASSWORD=queiroz2026 devlikeapro/waha`
+
+Troque `queiroz2026` por uma senha sua, se quiser. O WAHA fica disponível em
+`http://localhost:3000`. **A mesma chave** (`WHATSAPP_API_KEY`) precisa ir para o
+`config.json`, em `waha.api_key` (veja a seção 5).
 
 ### 4.3. Conectar seu WhatsApp
 
-1. Abra `http://localhost:3000` no navegador (painel do WAHA).
-2. Inicie a sessão `default` e gere o **QR Code**.
-3. No celular: WhatsApp → Aparelhos conectados → Conectar um aparelho → escaneie
+1. Abra `http://localhost:3000/dashboard` no navegador.
+2. Faça login (usuário `admin` / senha `queiroz2026`, conforme você definiu acima).
+3. Se aparecer um campo **"Api Key"** no Dashboard, cole a mesma chave (`queiroz2026`).
+4. Inicie a sessão `default` e gere o **QR Code**.
+5. No celular: WhatsApp → Aparelhos conectados → Conectar um aparelho → escaneie
    o QR. Pronto, o número está ligado ao bot.
 
 ### 4.4. Criar o arquivo de configuração
@@ -98,7 +116,7 @@ Isso cria o `leads.xlsx`. Abra, vá na aba **Leads** e preencha a partir da linh
 
 | Seção | O que ajustar |
 |---|---|
-| `waha` | URL (`http://localhost:3000`), sessão (`default`) e `api_key` (se você definir uma no WAHA). |
+| `waha` | URL (`http://localhost:3000`), sessão (`default`) e **`api_key`** — coloque aqui **a mesma chave** que você passou no `WHATSAPP_API_KEY` ao subir o WAHA (seção 4.2). Se ficar em branco, o envio falha com `401`. |
 | `modo_teste` | `ativo: true` para testar sem respeitar dia/horário e limitando os envios. **Em produção, deixe `false`.** |
 | `campanha` | Limites por dia (11–17), janela de horário (10:00–15:30), dias de recontato (12) e máximo de tentativas (2). |
 | `mensagem` | Texto da abordagem `inicial` e do `recontato`. Use `{nome}` e `{cidade}`. **Troque `[SEU NOME]`.** |
@@ -240,6 +258,9 @@ O contato é registrado na planilha como `interessado`, com observação `[INBOU
 
 | Sintoma | Provável causa |
 |---|---|
+| **`401 Unauthorized` ao enviar** | **(lição aprendida)** O WAHA exige uma **chave de API** que não está no `config.json`. Suba o WAHA com `-e WHATSAPP_API_KEY=...` (seção 4.2) e ponha a **mesma** chave em `waha.api_key`. Foi a causa de falhas "misteriosas" no envio. |
+| Dashboard do WAHA pede login | O WAHA tem usuário/senha próprios. Defina-os ao subir (`-e WAHA_DASHBOARD_USERNAME=... -e WAHA_DASHBOARD_PASSWORD=...`). |
+| Robô envia para os contatos de exemplo (Maria/João/Ana) | O `leads.xlsx` lido é o da pasta de execução, e não foi salvo com seus contatos. Edite/salve o arquivo **na pasta `whatsapp-bot`** (abra com `start leads.xlsx`). |
 | "Arquivo leads.xlsx não encontrado" | Rode `python criar_planilha.py` primeiro. |
 | Nada é enviado | Hoje é Sex–Dom ou feriado, ou `modo_teste` está limitando. |
 | Respostas não chegam | Webhook não está ligado, ou a URL não foi cadastrada no WAHA. |
