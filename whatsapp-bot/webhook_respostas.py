@@ -315,12 +315,13 @@ def classificar_resposta(texto: str) -> str:
     return "aguarda_humano"
 
 
-def atualizar_lead(telefone_resposta: str, texto: str, classificacao: str):
+def atualizar_lead(from_jid: str, telefone: str, texto: str, classificacao: str):
+    # from_jid = destino para responder (pode ser @lid); telefone = numero real (busca na planilha)
     if not Path(ARQUIVO_LEADS).exists():
         log.warning(f"Arquivo {ARQUIVO_LEADS} nao encontrado.")
         return False
 
-    telefone_limpo = "".join(filter(str.isdigit, telefone_resposta))
+    telefone_limpo = "".join(filter(str.isdigit, telefone))
 
     try:
         wb = openpyxl.load_workbook(ARQUIVO_LEADS)
@@ -343,7 +344,7 @@ def atualizar_lead(telefone_resposta: str, texto: str, classificacao: str):
                     tema_faq, resposta_faq = verificar_faq(texto)
                     cidade = str(row[COL_CIDADE - 1].value or "sua cidade").strip()
                     resposta_faq = resposta_faq.replace("[CIDADE]", cidade)
-                    enviar_resposta(telefone_resposta, resposta_faq)
+                    enviar_resposta(from_jid, resposta_faq)
                     novo_status = STATUS_ABORDADO
                     log.info(f" FAQ '{tema_faq}' respondido para {nome}")
 
@@ -493,7 +494,7 @@ def receber_mensagem():
 
         if lead_existe_na_planilha(telefone):
             classificacao = classificar_resposta(texto)
-            atualizar_lead(from_jid, texto, classificacao)
+            atualizar_lead(from_jid, telefone, texto, classificacao)
         else:
             processar_desconhecido(from_jid, telefone, texto)
 
