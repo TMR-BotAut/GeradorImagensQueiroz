@@ -106,6 +106,38 @@ def dia_liberado_para_envio() -> bool:
     return True
 
 
+# ── Mapa de id de privacidade (@lid) ──────────────────────────────────────────
+# O WhatsApp novo identifica alguns contatos por um "@lid" em vez do numero.
+# Ao enviar, guardamos <lid> -> <telefone> para o webhook reconhecer as respostas.
+ARQUIVO_LID_MAP = "lid_map.json"
+
+
+def registrar_lid(telefone: str, data: dict):
+    """Extrai o id de privacidade (@lid) da resposta do envio e salva no mapa."""
+    try:
+        msg_id = data.get("id")
+        remote = msg_id.get("remote", "") if isinstance(msg_id, dict) else ""
+        if not remote:
+            return
+        lid = remote.split("@")[0]
+        if not lid or lid == telefone:
+            return
+        mapa = {}
+        if Path(ARQUIVO_LID_MAP).exists():
+            try:
+                mapa = json.loads(Path(ARQUIVO_LID_MAP).read_text(encoding="utf-8"))
+            except Exception:
+                mapa = {}
+        if mapa.get(lid) != telefone:
+            mapa[lid] = telefone
+            Path(ARQUIVO_LID_MAP).write_text(
+                json.dumps(mapa, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+            log.info(f"  (id de privacidade {lid} ligado a {telefone})")
+    except Exception as e:
+        log.warning(f"  Nao consegui registrar o id de privacidade: {e}")
+
+
 # ── Envio via WAHA (WhatsApp HTTP API) ────────────────────────────────────────
 def enviar_mensagem(telefone: str, texto: str, cfg: dict) -> bool:
     """
@@ -130,6 +162,7 @@ def enviar_mensagem(telefone: str, texto: str, cfg: dict) -> bool:
         resp = requests.post(url, headers=headers, json=payload, timeout=15)
         resp.raise_for_status()
         data   = resp.json()
+        registrar_lid(telefone, data)
         msg_id = data.get("id", "?")
         log.info(f"  ✓ Enviado para {telefone} | msg_id={msg_id}")
         return True

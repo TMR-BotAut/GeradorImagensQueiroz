@@ -35,6 +35,11 @@ WAHA_URL = CFG["waha"]["url"].rstrip("/")
 WAHA_SESSAO = CFG["waha"]["sessao"]
 WAHA_API_KEY = CFG["waha"].get("api_key", "")
 
+# Mapa <id de privacidade @lid> -> <telefone real>, alimentado pela campanha.
+# O WhatsApp novo identifica alguns contatos por um "@lid" em vez do numero;
+# este mapa permite reconhecer o lead quando a resposta chega.
+ARQUIVO_LID_MAP = "lid_map.json"
+
 # Rodrigo -- parceiro para produtos fora de saude
 RODRIGO_NOME = "Rodrigo"
 RODRIGO_TELEFONE = "5521988541324"
@@ -105,6 +110,23 @@ PROCESSADOS: set = set()
 CONVERSAS: dict = {}
 
 app = Flask(__name__)
+
+
+# -- Resolucao do id de privacidade (@lid) -------------------------------------
+def resolver_telefone(raw_id: str) -> str:
+    """Converte o id de privacidade (@lid) do WhatsApp no telefone real.
+
+    Consulta o lid_map.json (alimentado pela campanha ao enviar). Se nao
+    encontrar, devolve o proprio raw_id (contato realmente desconhecido).
+    """
+    try:
+        if Path(ARQUIVO_LID_MAP).exists():
+            mapa = json.loads(Path(ARQUIVO_LID_MAP).read_text(encoding="utf-8"))
+            if raw_id in mapa:
+                return str(mapa[raw_id])
+    except Exception as e:
+        log.warning(f"Nao consegui ler {ARQUIVO_LID_MAP}: {e}")
+    return raw_id
 
 
 # -- Envio de mensagens --------------------------------------------------------
@@ -453,7 +475,8 @@ def receber_mensagem():
         PROCESSADOS.add(msg_id)
 
         from_jid = msg.get("from", "") or msg.get("chatId", "")
-        telefone = from_jid.split("@")[0]  # numero puro para lookups na planilha
+        # Resolve o @lid (id de privacidade) para o telefone real, se conhecido
+        telefone = resolver_telefone(from_jid.split("@")[0])
 
         body = msg.get("body", "")
         texto = body if isinstance(body, str) else ""
