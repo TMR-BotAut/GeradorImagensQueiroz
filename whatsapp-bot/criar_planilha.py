@@ -85,22 +85,8 @@ def criar_aba_leads(wb: openpyxl.Workbook):
     # Congelar linha de cabeçalho
     ws.freeze_panes = "A2"
 
-    # Exemplos de leads para guiar o preenchimento
-    exemplos = [
-        ["Maria Silva", "5521999990001", "Teresópolis", "pendente", None, None, None, 0, None, None, None],
-        ["João Santos", "5521988880002", "Petrópolis", "pendente", None, None, None, 0, None, None, None],
-        ["Ana Ferreira", "5521977770003", "Nova Friburgo", "pendente", None, None, None, 0, None, None, None],
-    ]
-
-    for i, ex in enumerate(exemplos, 2):
-        for j, val in enumerate(ex, 1):
-            ws.cell(i, j).value = val
-            ws.cell(i, j).border = borda_fina()
-            ws.cell(i, j).alignment = Alignment(vertical="center")
-        # Cor de fundo zebra
-        cor = COR_CINZA if i % 2 == 0 else COR_BRANCO
-        for j in range(1, len(colunas) + 1):
-            ws.cell(i, j).fill = PatternFill("solid", fgColor=cor)
+    # A planilha e criada VAZIA de proposito: contatos de exemplo ja causaram
+    # envios de teste indevidos. Preencha a partir da linha 2 com leads reais.
 
     # Validação de dados para coluna Status (D)
     from openpyxl.worksheet.datavalidation import DataValidation

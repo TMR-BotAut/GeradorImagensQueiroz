@@ -117,12 +117,18 @@ app = Flask(__name__)
 
 
 # -- Resolucao do id de privacidade (@lid) -------------------------------------
-def resolver_telefone(raw_id: str) -> str:
-    """Converte o id de privacidade (@lid) do WhatsApp no telefone real.
+def resolver_telefone(from_jid: str) -> str:
+    """Converte o id do remetente no telefone real.
 
-    Consulta o lid_map.json (alimentado pela campanha ao enviar). Se nao
-    encontrar, devolve o proprio raw_id (contato realmente desconhecido).
+    Para @c.us o proprio id ja e o telefone. Para @lid (id de privacidade),
+    tenta o lid_map.json e, se nao achar, consulta o WAHA (/api/contacts);
+    o resultado e salvo no lid_map.json para as proximas mensagens.
     """
+    raw_id = from_jid.split("@")[0]
+    if not from_jid.endswith("@lid"):
+        return raw_id
+
+    mapa = {}
     try:
         if Path(ARQUIVO_LID_MAP).exists():
             mapa = json.loads(Path(ARQUIVO_LID_MAP).read_text(encoding="utf-8"))
@@ -130,6 +136,31 @@ def resolver_telefone(raw_id: str) -> str:
                 return str(mapa[raw_id])
     except Exception as e:
         log.warning(f"Nao consegui ler {ARQUIVO_LID_MAP}: {e}")
+
+    try:
+        headers = {"X-Api-Key": WAHA_API_KEY} if WAHA_API_KEY else {}
+        resp = http_requests.get(
+            f"{WAHA_URL}/api/contacts",
+            params={"contactId": f"{raw_id}@lid", "session": WAHA_SESSAO},
+            headers=headers,
+            timeout=10,
+        )
+        if resp.ok:
+            numero = (resp.json() or {}).get("number")
+            if numero:
+                mapa[raw_id] = str(numero)
+                try:
+                    Path(ARQUIVO_LID_MAP).write_text(
+                        json.dumps(mapa, indent=2, ensure_ascii=False),
+                        encoding="utf-8",
+                    )
+                except Exception as e:
+                    log.warning(f"Nao consegui salvar {ARQUIVO_LID_MAP}: {e}")
+                log.info(f" @lid {raw_id} resolvido via WAHA -> {numero}")
+                return str(numero)
+    except Exception as e:
+        log.warning(f" Falha ao resolver @lid {raw_id} via WAHA: {e}")
+
     return raw_id
 
 
@@ -178,8 +209,17 @@ def processar_desconhecido(from_jid: str, telefone: str, texto: str):
 
     if etapa == "inicio":
         CONVERSAS[telefone] = {"etapa": "aguarda_nome", "from_jid": from_jid, "numero_original": telefone}
-        saudacao = CFG["mensagem"].get("triagem_saudacao", "Olá! Como vai?! 😊\n\nMeu nome é [SEU NOME], trabalho com seguros e planos de saúde.\n\nMe conta, qual é o seu nome?")
-        saudacao = saudacao.replace("{number}", telefone)
+        # Se o remetente veio como @lid e nao conseguimos resolver o numero real,
+        # nao faz sentido pedir confirmacao dele — pedimos o numero diretamente.
+        lid_sem_numero = from_jid.endswith("@lid") and telefone == from_jid.split("@")[0]
+        if lid_sem_numero:
+            saudacao = CFG["mensagem"].get(
+                "triagem_saudacao_sem_numero",
+                "Olá! Como vai?! 😊\n\nMeu nome é [SEU NOME], trabalho com seguros e planos de saúde.\n\nMe conta, qual é o seu nome? E qual o melhor número para falar com você?"
+            )
+        else:
+            saudacao = CFG["mensagem"].get("triagem_saudacao", "Olá! Como vai?! 😊\n\nMeu nome é [SEU NOME], trabalho com seguros e planos de saúde.\n\nMe conta, qual é o seu nome? Pode confirmar se {number} é seu contato preferencial, ou se prefere informar outro?")
+            saudacao = saudacao.replace("{number}", telefone)
         enviar_resposta(from_jid, saudacao)
         log.info(f" Novo contato {from_jid} - iniciando fluxo de triagem")
         return
@@ -189,19 +229,18 @@ def processar_desconhecido(from_jid: str, telefone: str, texto: str):
     if etapa == "aguarda_nome":
         # Tenta extrair nome e possível número da resposta
         partes = texto.strip().split()
+        if not partes:
+            return
         apelido = partes[0].capitalize()
 
-        # Verifica se há número nas partes seguintes
-        numero_informado = None
-        for parte in partes[1:]:
-            if parte.isdigit() and len(parte) >= 10:
-                numero_informado = parte
-                break
+        # Junta os digitos do resto da mensagem (aceita "21 97293-2120", "(21) 97293 2120" etc.)
+        digitos_resto = "".join(ch for ch in " ".join(partes[1:]) if ch.isdigit())
+        numero_informado = digitos_resto if len(digitos_resto) >= 10 else None
 
         CONVERSAS[telefone]["apelido"] = apelido
 
         # Se informou número diferente do original
-        if numero_informado and numero_informado != estado.get("numero_original"):
+        if numero_informado and numero_informado[-11:] != str(estado.get("numero_original", ""))[-11:]:
             CONVERSAS[telefone]["numero_informado"] = numero_informado
             CONVERSAS[telefone]["etapa"] = "confirma_numero"
             confirma_msg = CFG["mensagem"].get("triagem_confirma_numero", "Seu melhor número para contato é o *{numero_informado}*?")
@@ -216,31 +255,31 @@ def processar_desconhecido(from_jid: str, telefone: str, texto: str):
 
     if etapa == "confirma_numero":
         apelido = estado.get("apelido", "")
-        numero_informado = estado.get("numero_informado", "")
+        digitos = "".join(filter(str.isdigit, texto))
+        low = texto.lower()
 
-        if texto.lower() in ["sim", "s", "ok", "confirma", "confirmado"]:
+        if len(digitos) >= 10:
+            # Informou (ou corrigiu) um número diretamente
+            CONVERSAS[telefone]["numero_informado"] = digitos
             CONVERSAS[telefone]["etapa"] = "aguarda_categoria"
             menu = CFG["mensagem"].get("triagem_menu_categoria", MENU_CATEGORIA)
             enviar_resposta(from_jid, menu.format(apelido=apelido))
-        elif texto.lower() in ["não", "nao", "n", "corrigir", "outro", "errado"]:
-            # Pede novo número
+        elif any(p in low for p in ["não", "nao", "outro", "errado", "corrig"]):
             enviar_resposta(from_jid, f"Sem problema, {apelido}! Qual é o número correto?")
             CONVERSAS[telefone]["etapa"] = "aguarda_numero_corrigido"
+        elif any(p in low for p in ["sim", "isso", "ok", "confirmo", "correto", "certo", "pode ser", "esse mesmo", "é esse", "e esse"]):
+            CONVERSAS[telefone]["etapa"] = "aguarda_categoria"
+            menu = CFG["mensagem"].get("triagem_menu_categoria", MENU_CATEGORIA)
+            enviar_resposta(from_jid, menu.format(apelido=apelido))
         else:
-            # Se informou novo número diretamente
-            if texto.isdigit() and len(texto) >= 10:
-                CONVERSAS[telefone]["numero_informado"] = texto
-                CONVERSAS[telefone]["etapa"] = "aguarda_categoria"
-                menu = CFG["mensagem"].get("triagem_menu_categoria", MENU_CATEGORIA)
-                enviar_resposta(from_jid, menu.format(apelido=apelido))
-            else:
-                enviar_resposta(from_jid, f"Por favor, {apelido}, responda com SIM para confirmar ou informe o número correto.")
+            enviar_resposta(from_jid, f"Por favor, {apelido}, me confirma se o número está certo ou me passa o número correto. 😊")
         return
 
     if etapa == "aguarda_numero_corrigido":
         apelido = estado.get("apelido", "")
-        if texto.isdigit() and len(texto) >= 10:
-            CONVERSAS[telefone]["numero_informado"] = texto
+        digitos = "".join(filter(str.isdigit, texto))
+        if len(digitos) >= 10:
+            CONVERSAS[telefone]["numero_informado"] = digitos
             CONVERSAS[telefone]["etapa"] = "aguarda_categoria"
             menu = CFG["mensagem"].get("triagem_menu_categoria", MENU_CATEGORIA)
             enviar_resposta(from_jid, menu.format(apelido=apelido))
@@ -531,8 +570,6 @@ def receber_mensagem():
         PROCESSADOS.add(msg_id)
 
         from_jid = msg.get("from", "") or msg.get("chatId", "")
-        # Resolve o @lid (id de privacidade) para o telefone real, se conhecido
-        telefone = resolver_telefone(from_jid.split("@")[0])
 
         body = msg.get("body", "")
         texto = body if isinstance(body, str) else ""
@@ -540,8 +577,15 @@ def receber_mensagem():
         if not texto:
             return jsonify({"status": "no_text"}), 200
 
-        # Ignora mensagens de grupos (IDs de grupo sao muito longos ou terminam em @g.us)
-        if "@g.us" in from_jid or len(telefone) > 15:
+        # Ignora grupos, newsletters e broadcasts antes de qualquer processamento
+        if any(s in from_jid for s in ("@g.us", "@newsletter", "@broadcast")):
+            log.info(f"Grupo ignorado: {from_jid}")
+            return jsonify({"status": "ignored"}), 200
+
+        # Resolve o @lid (id de privacidade) para o telefone real
+        telefone = resolver_telefone(from_jid)
+
+        if len(telefone) > 15 and "@lid" not in from_jid:
             log.info(f"Grupo ignorado: {from_jid}")
             return jsonify({"status": "ignored"}), 200
 
