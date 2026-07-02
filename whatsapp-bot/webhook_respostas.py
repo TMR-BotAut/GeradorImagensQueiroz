@@ -60,45 +60,49 @@ COL_OBS = 11
 
 # Menus
 MENU_CATEGORIA = (
-    "O que voce esta buscando, {apelido}? \U0001f60a\n\n"
-    "1 - Plano de Saude e Odontologico\n"
-    "2 - Seguros\n"
-    "3 - Solucoes Financeiras\n\n"
-    "Responda com o numero da opcao."
+    "O que você está buscando, {apelido}? 😊\n\n"
+    "1️⃣ *Plano de Saúde e Odontológico*\n"
+    "2️⃣ *Seguros* (Veículo, Vida, Residência, Equipamentos, Viagem)\n"
+    "3️⃣ *Soluções Financeiras* (Consórcio, Financiamento, Previdência, Seguros)\n\n"
+    "Responda com o número da opção."
 )
 
 MENU_SEGUROS = (
-    "Otimo, {apelido}! Qual tipo de seguro?\n\n"
-    "1 - Veiculo\n"
-    "2 - Vida\n"
-    "3 - Residencia\n"
-    "4 - Equipamentos Portateis\n"
-    "5 - Viagem\n\n"
-    "Responda com o numero da opcao."
+    "Entendi! Vamos lá com os Seguros. Qual te interessa? (responde o número)\n\n"
+    "1️⃣ Seguro de Veículo\n"
+    "2️⃣ Seguro de Vida\n"
+    "3️⃣ Seguro Residencial\n"
+    "4️⃣ Seguro de Equipamentos Portáteis\n"
+    "5️⃣ Seguro de Viagem\n"
+    "6️⃣ Seguro de Responsabilidade Civil\n"
+    "7️⃣ Seguro Transporte / Carga\n"
+    "8️⃣ Seguro Pet"
 )
 
 MENU_FINANCEIRO = (
-    "Otimo, {apelido}! Qual solucao financeira?\n\n"
-    "1 - Consorcio\n"
-    "2 - Financiamento\n"
-    "3 - Previdencia Privada\n"
-    "4 - Responsabilidade Civil\n"
-    "5 - Seguro de Vida\n\n"
-    "Responda com o numero da opcao."
+    "Entendi! Vamos lá com Soluções Financeiras. Qual te interessa? (responde o número)\n\n"
+    "1️⃣ Consórcio\n"
+    "2️⃣ Financiamento\n"
+    "3️⃣ Previdência\n"
+    "4️⃣ Responsabilidade Civil\n"
+    "5️⃣ Seguro de Vida"
 )
 
 PRODUTOS_SEGUROS = {
-    "1": "Veiculo",
-    "2": "Vida",
-    "3": "Residencia",
-    "4": "Equipamentos Portateis",
-    "5": "Viagem",
+    "1": "Seguro de Veículo",
+    "2": "Seguro de Vida",
+    "3": "Seguro Residencial",
+    "4": "Seguro de Equipamentos Portáteis",
+    "5": "Seguro de Viagem",
+    "6": "Seguro de Responsabilidade Civil",
+    "7": "Seguro Transporte / Carga",
+    "8": "Seguro Pet",
 }
 
 PRODUTOS_FINANCEIRO = {
-    "1": "Consorcio",
+    "1": "Consórcio",
     "2": "Financiamento",
-    "3": "Previdencia Privada",
+    "3": "Previdência",
     "4": "Responsabilidade Civil",
     "5": "Seguro de Vida",
 }
@@ -149,13 +153,15 @@ def enviar_resposta(telefone: str, texto: str) -> bool:
         return False
 
 
-def notificar_rodrigo(apelido: str, telefone_cliente: str, produto: str):
+def notificar_rodrigo(apelido: str, telefone_cliente: str, produto: str, telefone_informado: str = None):
     msg = (
-        f"*Novo contato - Queiroz Seguros*\n\n"
-        f"Nome: {apelido}\n"
-        f"Telefone: {telefone_cliente}\n"
-        f"Interesse: {produto}"
+        f"🔔 Contato novo - {apelido}\n"
+        f"📱 Telefone (WhatsApp): {telefone_cliente}\n"
     )
+    if telefone_informado and telefone_informado != telefone_cliente:
+        msg += f"📱 Telefone informado: {telefone_informado}\n"
+    msg += f"🛡️ Interesse: {produto}"
+
     enviar_resposta(RODRIGO_TELEFONE, msg)
     log.info(f" Rodrigo notificado: {apelido} / {produto}")
 
@@ -171,47 +177,96 @@ def processar_desconhecido(from_jid: str, telefone: str, texto: str):
     texto = texto.strip()
 
     if etapa == "inicio":
-        CONVERSAS[telefone] = {"etapa": "aguarda_nome", "from_jid": from_jid}
-        enviar_resposta(
-            from_jid,
-            "Ola! \U0001f60a Seja bem-vindo a *Queiroz Seguros*!\n\nAntes de tudo, como posso te chamar?"
-        )
+        CONVERSAS[telefone] = {"etapa": "aguarda_nome", "from_jid": from_jid, "numero_original": telefone}
+        saudacao = CFG["mensagem"].get("triagem_saudacao", "Olá! Como vai?! 😊\n\nMeu nome é [SEU NOME], trabalho com seguros e planos de saúde.\n\nMe conta, qual é o seu nome?")
+        saudacao = saudacao.replace("{number}", telefone)
+        enviar_resposta(from_jid, saudacao)
         log.info(f" Novo contato {from_jid} - iniciando fluxo de triagem")
         return
 
     from_jid = estado.get("from_jid", from_jid)
 
     if etapa == "aguarda_nome":
-        apelido = texto.strip().split()[0].capitalize()
+        # Tenta extrair nome e possível número da resposta
+        partes = texto.strip().split()
+        apelido = partes[0].capitalize()
+
+        # Verifica se há número nas partes seguintes
+        numero_informado = None
+        for parte in partes[1:]:
+            if parte.isdigit() and len(parte) >= 10:
+                numero_informado = parte
+                break
+
         CONVERSAS[telefone]["apelido"] = apelido
-        CONVERSAS[telefone]["etapa"] = "aguarda_categoria"
-        enviar_resposta(
-            from_jid,
-            f"Prazer, {apelido}! \U0001f60a\n\n" + MENU_CATEGORIA.format(apelido=apelido)
-        )
+
+        # Se informou número diferente do original
+        if numero_informado and numero_informado != estado.get("numero_original"):
+            CONVERSAS[telefone]["numero_informado"] = numero_informado
+            CONVERSAS[telefone]["etapa"] = "confirma_numero"
+            confirma_msg = CFG["mensagem"].get("triagem_confirma_numero", "Seu melhor número para contato é o *{numero_informado}*?")
+            confirma_msg = confirma_msg.replace("{numero_informado}", numero_informado)
+            enviar_resposta(from_jid, confirma_msg)
+        else:
+            # Sem número diferente, segue pra categoria
+            CONVERSAS[telefone]["etapa"] = "aguarda_categoria"
+            menu = CFG["mensagem"].get("triagem_menu_categoria", MENU_CATEGORIA)
+            enviar_resposta(from_jid, menu.format(apelido=apelido))
+        return
+
+    if etapa == "confirma_numero":
+        apelido = estado.get("apelido", "")
+        numero_informado = estado.get("numero_informado", "")
+
+        if texto.lower() in ["sim", "s", "ok", "confirma", "confirmado"]:
+            CONVERSAS[telefone]["etapa"] = "aguarda_categoria"
+            menu = CFG["mensagem"].get("triagem_menu_categoria", MENU_CATEGORIA)
+            enviar_resposta(from_jid, menu.format(apelido=apelido))
+        elif texto.lower() in ["não", "nao", "n", "corrigir", "outro", "errado"]:
+            # Pede novo número
+            enviar_resposta(from_jid, f"Sem problema, {apelido}! Qual é o número correto?")
+            CONVERSAS[telefone]["etapa"] = "aguarda_numero_corrigido"
+        else:
+            # Se informou novo número diretamente
+            if texto.isdigit() and len(texto) >= 10:
+                CONVERSAS[telefone]["numero_informado"] = texto
+                CONVERSAS[telefone]["etapa"] = "aguarda_categoria"
+                menu = CFG["mensagem"].get("triagem_menu_categoria", MENU_CATEGORIA)
+                enviar_resposta(from_jid, menu.format(apelido=apelido))
+            else:
+                enviar_resposta(from_jid, f"Por favor, {apelido}, responda com SIM para confirmar ou informe o número correto.")
+        return
+
+    if etapa == "aguarda_numero_corrigido":
+        apelido = estado.get("apelido", "")
+        if texto.isdigit() and len(texto) >= 10:
+            CONVERSAS[telefone]["numero_informado"] = texto
+            CONVERSAS[telefone]["etapa"] = "aguarda_categoria"
+            menu = CFG["mensagem"].get("triagem_menu_categoria", MENU_CATEGORIA)
+            enviar_resposta(from_jid, menu.format(apelido=apelido))
+        else:
+            enviar_resposta(from_jid, f"Por favor, {apelido}, informe um número válido (ex: 5521987654321).")
         return
 
     if etapa == "aguarda_categoria":
         apelido = estado.get("apelido", "")
         if texto == "1":
             # Plano de Saude e Odontologico -> atendimento interno
-            enviar_resposta(
-                from_jid,
-                f"Otima escolha, {apelido}! \U0001f60a\n\n"
-                f"Nossa equipe especializada em *Plano de Saude e Odontologico* vai entrar em contato com voce em breve.\n\n"
-                f"Fique a vontade para perguntar qualquer coisa por aqui!"
-            )
-            registrar_lead_desconhecido(telefone, estado, "Plano de Saude e Odontologico", "saude_interno")
+            msg_saude = CFG["mensagem"].get("triagem_saude_interno", "Ótima escolha, {apelido}! 😊\n\nNossa equipe especializada em *Plano de Saúde e Odontológico* vai entrar em contato com você em breve.\n\nFique à vontade para perguntar qualquer coisa por aqui!")
+            enviar_resposta(from_jid, msg_saude.format(apelido=apelido))
+            registrar_lead_desconhecido(telefone, estado, "Plano de Saúde e Odontológico", "saude_interno")
             log.info(f" {apelido} ({telefone}) - Saude/Odonto -> ATENDIMENTO INTERNO")
             del CONVERSAS[telefone]
         elif texto == "2":
             CONVERSAS[telefone]["categoria"] = "seguros"
             CONVERSAS[telefone]["etapa"] = "aguarda_produto_seguro"
-            enviar_resposta(from_jid, MENU_SEGUROS.format(apelido=apelido))
+            menu = CFG["mensagem"].get("triagem_menu_seguros", MENU_SEGUROS)
+            enviar_resposta(from_jid, menu)
         elif texto == "3":
             CONVERSAS[telefone]["categoria"] = "financeiro"
             CONVERSAS[telefone]["etapa"] = "aguarda_produto_financeiro"
-            enviar_resposta(from_jid, MENU_FINANCEIRO.format(apelido=apelido))
+            menu = CFG["mensagem"].get("triagem_menu_financeiro", MENU_FINANCEIRO)
+            enviar_resposta(from_jid, menu)
         else:
             enviar_resposta(
                 from_jid,
@@ -223,22 +278,22 @@ def processar_desconhecido(from_jid: str, telefone: str, texto: str):
     if etapa == "aguarda_produto_seguro":
         apelido = estado.get("apelido", "")
         tel_cliente = telefone
+        tel_informado = estado.get("numero_informado", None)
         produto = PRODUTOS_SEGUROS.get(texto)
 
         if not produto:
+            menu = CFG["mensagem"].get("triagem_menu_seguros", MENU_SEGUROS)
             enviar_resposta(
                 from_jid,
-                f"Por favor, {apelido}, responda com um numero de 1 a 5. \U0001f60a\n\n"
-                + MENU_SEGUROS.format(apelido=apelido)
+                f"Por favor, {apelido}, responda com um número de 1 a 8. 😊\n\n" + menu
             )
             return
 
-        enviar_resposta(
-            from_jid,
-            f"*{RODRIGO_NOME}* e especialista em *{produto}* e vai entrar em contato com voce em breve, {apelido}! \U0001f60a\n\n"
-            f"Caso prefira, pode chama-lo diretamente: (21) 98854-1324"
-        )
-        notificar_rodrigo(apelido, tel_cliente, produto)
+        msg_encaminhado = CFG["mensagem"].get("triagem_seguros_encaminhado", "*{nome_parceiro}* é especialista em *{produto}* e vai entrar em contato com você em breve, {apelido}! 😊\n\nCaso prefira, pode chamá-lo diretamente: (21) 98854-1324")
+        msg_encaminhado = msg_encaminhado.replace("{nome_parceiro}", RODRIGO_NOME).replace("{produto}", produto).replace("{apelido}", apelido)
+        enviar_resposta(from_jid, msg_encaminhado)
+
+        notificar_rodrigo(apelido, tel_cliente, produto, tel_informado)
         registrar_lead_desconhecido(telefone, estado, produto, "rodrigo")
         del CONVERSAS[telefone]
         return
@@ -246,22 +301,22 @@ def processar_desconhecido(from_jid: str, telefone: str, texto: str):
     if etapa == "aguarda_produto_financeiro":
         apelido = estado.get("apelido", "")
         tel_cliente = telefone
+        tel_informado = estado.get("numero_informado", None)
         produto = PRODUTOS_FINANCEIRO.get(texto)
 
         if not produto:
+            menu = CFG["mensagem"].get("triagem_menu_financeiro", MENU_FINANCEIRO)
             enviar_resposta(
                 from_jid,
-                f"Por favor, {apelido}, responda com um numero de 1 a 5. \U0001f60a\n\n"
-                + MENU_FINANCEIRO.format(apelido=apelido)
+                f"Por favor, {apelido}, responda com um número de 1 a 5. 😊\n\n" + menu
             )
             return
 
-        enviar_resposta(
-            from_jid,
-            f"*{RODRIGO_NOME}* e especialista em *{produto}* e vai entrar em contato com voce em breve, {apelido}! \U0001f60a\n\n"
-            f"Caso prefira, pode chama-lo diretamente: (21) 98854-1324"
-        )
-        notificar_rodrigo(apelido, tel_cliente, produto)
+        msg_encaminhado = CFG["mensagem"].get("triagem_financeiro_encaminhado", "*{nome_parceiro}* é especialista em *{produto}* e vai entrar em contato com você em breve, {apelido}! 😊\n\nCaso prefira, pode chamá-lo diretamente: (21) 98854-1324")
+        msg_encaminhado = msg_encaminhado.replace("{nome_parceiro}", RODRIGO_NOME).replace("{produto}", produto).replace("{apelido}", apelido)
+        enviar_resposta(from_jid, msg_encaminhado)
+
+        notificar_rodrigo(apelido, tel_cliente, produto, tel_informado)
         registrar_lead_desconhecido(telefone, estado, produto, "rodrigo")
         del CONVERSAS[telefone]
         return
