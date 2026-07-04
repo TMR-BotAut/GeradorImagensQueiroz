@@ -14,6 +14,11 @@
     "api_key": ""
   },
 
+  "alertas": {
+    "_instrucao": "Numero que recebe o resumo diario e os alertas em tempo real de leads interessados (55 + DDD + numero).",
+    "numero": ""
+  },
+
   "modo_teste": {
     "ativo": true,
     "max_envios": 2,

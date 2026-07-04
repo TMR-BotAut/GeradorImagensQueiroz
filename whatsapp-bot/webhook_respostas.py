@@ -44,6 +44,9 @@ ARQUIVO_LID_MAP = "lid_map.json"
 RODRIGO_NOME = "Rodrigo"
 RODRIGO_TELEFONE = "5521988541324"
 
+# Numero que recebe alertas em tempo real (config.json -> "alertas": {"numero": "55..."})
+ALERTA_TELEFONE = str(CFG.get("alertas", {}).get("numero", "") or "")
+
 # Status
 STATUS_ABORDADO = "abordado"
 STATUS_RECUSOU = "recusou"
@@ -195,6 +198,12 @@ def notificar_rodrigo(apelido: str, telefone_cliente: str, produto: str, telefon
 
     enviar_resposta(RODRIGO_TELEFONE, msg)
     log.info(f" Rodrigo notificado: {apelido} / {produto}")
+
+
+def alertar_dono(texto: str):
+    """Alerta em tempo real para o numero em config alertas.numero (silencioso se vazio)."""
+    if ALERTA_TELEFONE:
+        enviar_resposta(ALERTA_TELEFONE, texto)
 
 
 # -- Fluxo de contatos desconhecidos -------------------------------------------
@@ -445,10 +454,24 @@ def atualizar_lead(from_jid: str, telefone: str, texto: str, classificacao: str)
                 elif classificacao == STATUS_INTERESSADO:
                     novo_status = STATUS_INTERESSADO
                     log.info(f" INTERESSADO -> {nome} ({tel_planilha}) - ATENCAO HUMANA")
+                    alertar_dono(
+                        f"🔥 *Lead com INTERESSE!*\n"
+                        f"👤 {nome}\n"
+                        f"📱 {tel_planilha}\n"
+                        f"💬 \"{str(texto)[:150]}\"\n\n"
+                        f"Lead quente — responda o quanto antes!"
+                    )
 
                 else:
                     novo_status = STATUS_INTERESSADO
                     log.info(f" RESPOSTA -> {nome} ({tel_planilha}) - REVISAR")
+                    alertar_dono(
+                        f"✋ *Resposta para revisar*\n"
+                        f"👤 {nome}\n"
+                        f"📱 {tel_planilha}\n"
+                        f"💬 \"{str(texto)[:150]}\"\n\n"
+                        f"O bot não soube classificar — veja se precisa responder."
+                    )
 
                 ws.cell(row_num, COL_STATUS).value = novo_status
                 ws.cell(row_num, COL_ULTIMA_R).value = texto[:200]
