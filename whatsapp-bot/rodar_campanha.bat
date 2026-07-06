@@ -1,4 +1,5 @@
 @echo off
+set PYTHONUTF8=1
 cd /d "C:\Projetos\bot-whatsapp"
 if not exist logs mkdir logs
 echo ================== %date% %time% ================== >> logs\campanha.log
