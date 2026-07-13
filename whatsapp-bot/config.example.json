@@ -80,7 +80,10 @@
   "palavras_recusa": [
     "não quero", "nao quero", "não tenho interesse", "nao tenho interesse",
     "não preciso", "nao preciso", "pare", "remova", "bloquear", "block",
-    "chega", "stop", "cancelar", "descadastrar", "me tire da lista"
+    "chega", "stop", "cancelar", "descadastrar", "me tire da lista",
+    "não obg", "nao obg", "não, obg", "nao, obg",
+    "não obrigado", "nao obrigado", "não, obrigado", "nao, obrigado",
+    "não obrigada", "nao obrigada", "não, obrigada", "nao, obrigada"
   ],
 
   "palavras_interesse": [
