@@ -57,6 +57,7 @@ COL_NOME = 1
 COL_TELEFONE = 2
 COL_CIDADE = 3
 COL_STATUS = 4
+COL_TENTATIVAS = 8
 COL_ULTIMA_R = 9
 COL_HORA_R = 10
 COL_OBS = 11
@@ -204,6 +205,95 @@ def alertar_dono(texto: str):
     """Alerta em tempo real para o numero em config alertas.numero (silencioso se vazio)."""
     if ALERTA_TELEFONE:
         enviar_resposta(ALERTA_TELEFONE, texto)
+
+
+# -- Comandos administrativos (dono manda mensagem para o bot) ------------------
+def eh_admin(telefone: str) -> bool:
+    """True se o remetente e o numero de alertas (dono)."""
+    if not ALERTA_TELEFONE:
+        return False
+    tel = "".join(filter(str.isdigit, telefone))
+    adm = "".join(filter(str.isdigit, ALERTA_TELEFONE))
+    return bool(tel) and (tel == adm or tel[-11:] == adm[-11:])
+
+
+def bloquear_lead_por_comando(numero: str):
+    """Marca o lead como recusou (nunca mais recebe campanha).
+
+    Retorna ("ok", nome), ("nao_encontrado", None) ou ("erro", detalhe).
+    """
+    if not Path(ARQUIVO_LEADS).exists():
+        return ("erro", f"arquivo {ARQUIVO_LEADS} nao encontrado")
+    alvo = "".join(filter(str.isdigit, numero))
+    try:
+        wb = openpyxl.load_workbook(ARQUIVO_LEADS)
+        ws = wb["Leads"]
+        for row in ws.iter_rows(min_row=2):
+            tel = "".join(filter(str.isdigit, str(row[COL_TELEFONE - 1].value or "")))
+            if not tel:
+                continue
+            if tel == alvo or tel[-11:] == alvo[-11:]:
+                row_num = row[0].row
+                nome = str(row[COL_NOME - 1].value or "?")
+                ws.cell(row_num, COL_STATUS).value = STATUS_RECUSOU
+                ws.cell(row_num, COL_TENTATIVAS).value = 99
+                obs = str(ws.cell(row_num, COL_OBS).value or "")
+                if "NAO PERTURBE" not in obs:
+                    marca = f"[NAO PERTURBE {date.today().strftime('%d/%m/%Y')}]"
+                    ws.cell(row_num, COL_OBS).value = (obs + " " + marca).strip()
+                atualizar_dashboard(wb)
+                wb.save(ARQUIVO_LEADS)
+                return ("ok", nome)
+        return ("nao_encontrado", None)
+    except Exception as e:
+        log.error(f" Erro ao bloquear por comando: {e}")
+        return ("erro", str(e))
+
+
+def processar_comando_admin(from_jid: str, texto: str) -> bool:
+    """Processa comandos do dono. Retorna True se o texto era um comando.
+
+    Comandos:
+        bloquear 5521966628839          -> marca recusou na planilha
+        bloquear 5521966628839 avisar   -> idem + avisa a pessoa do descadastro
+    """
+    partes = texto.strip().lower().split()
+    if not partes or partes[0] != "bloquear":
+        return False
+
+    digitos = "".join(ch for ch in texto if ch.isdigit())
+    if len(digitos) < 10:
+        enviar_resposta(
+            from_jid,
+            "Uso: *bloquear 5521966628839*\n"
+            "Para também avisar a pessoa: *bloquear 5521966628839 avisar*",
+        )
+        return True
+
+    resultado, info = bloquear_lead_por_comando(digitos)
+
+    if resultado == "nao_encontrado":
+        enviar_resposta(from_jid, f"Número {digitos} não encontrado na planilha — nada foi alterado.")
+        return True
+
+    if resultado == "erro":
+        enviar_resposta(
+            from_jid,
+            f"⚠️ Não consegui salvar a planilha (está aberta no Excel?).\nDetalhe: {info[:120]}",
+        )
+        return True
+
+    log.info(f" COMANDO ADMIN: bloquear {digitos} -> {info}")
+    if "avisar" in partes:
+        msg_opt_out = CFG["mensagem"].get(
+            "opt_out_confirmacao",
+            "Entendido! Você não receberá mais nossas mensagens por aqui. Obrigado! 😊",
+        )
+        enviar_resposta(digitos, msg_opt_out)
+        enviar_resposta(from_jid, f"✓ Bloqueado: {info} ({digitos}) — pessoa avisada do descadastro.")
+    else:
+        enviar_resposta(from_jid, f"✓ Bloqueado: {info} ({digitos})")
+    return True
 
 
 # -- Fluxo de contatos desconhecidos -------------------------------------------
@@ -613,6 +703,10 @@ def receber_mensagem():
             return jsonify({"status": "ignored"}), 200
 
         log.info(f"Mensagem de {from_jid}: '{texto[:80]}'")
+
+        # Comando administrativo do dono (numero de alertas): "bloquear 5521..."
+        if eh_admin(telefone) and processar_comando_admin(from_jid, texto):
+            return jsonify({"status": "admin_cmd"}), 200
 
         if lead_existe_na_planilha(telefone):
             classificacao = classificar_resposta(texto)

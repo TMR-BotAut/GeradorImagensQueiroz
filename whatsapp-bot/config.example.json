@@ -46,7 +46,8 @@
     "triagem_menu_financeiro": "Entendi! Vamos lá com Soluções Financeiras. Qual te interessa? (responde o número)\n\n1️⃣ Consórcio\n2️⃣ Financiamento\n3️⃣ Previdência\n4️⃣ Responsabilidade Civil\n5️⃣ Seguro de Vida",
     "triagem_saude_interno": "Ótima escolha, {apelido}! 😊\n\nNossa equipe especializada em *Plano de Saúde e Odontológico* vai entrar em contato com você em breve.\n\nFique à vontade para perguntar qualquer coisa por aqui!",
     "triagem_seguros_encaminhado": "*{nome_parceiro}* é especialista em *{produto}* e vai entrar em contato com você em breve, {apelido}! 😊\n\nCaso prefira, pode chamá-lo diretamente: (21) 98854-1324",
-    "triagem_financeiro_encaminhado": "*{nome_parceiro}* é especialista em *{produto}* e vai entrar em contato com você em breve, {apelido}! 😊\n\nCaso prefira, pode chamá-lo diretamente: (21) 98854-1324"
+    "triagem_financeiro_encaminhado": "*{nome_parceiro}* é especialista em *{produto}* e vai entrar em contato com você em breve, {apelido}! 😊\n\nCaso prefira, pode chamá-lo diretamente: (21) 98854-1324",
+    "opt_out_confirmacao": "Entendido! Você não receberá mais nossas mensagens por aqui. Obrigado! 😊"
   },
 
   "faq": {
