@@ -161,18 +161,19 @@ def enviar_mensagem(telefone: str, texto: str, cfg: dict) -> bool:
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=15)
         resp.raise_for_status()
-        # WAHA pode responder 2xx com corpo vazio ou nao-JSON (varia por versao/engine).
-        # Status 2xx = mensagem aceita; nao marcamos falha so porque nao veio um JSON.
+        # Envio real bem-sucedido retorna um JSON com o id da mensagem.
+        # Corpo vazio = o motor do WAHA falhou (ex: getChatById quebrado) e a
+        # mensagem NAO foi entregue — tratamos como falha (loud) para nao marcar
+        # o lead como abordado sem ter enviado nada.
         try:
             data = resp.json()
         except ValueError:
-            data = {}
-        if isinstance(data, dict) and data:
-            registrar_lid(telefone, data)
-            msg_id = data.get("id", "?")
-            log.info(f"  ✓ Enviado para {telefone} | msg_id={msg_id}")
-        else:
-            log.info(f"  ✓ Enviado para {telefone} (WAHA nao retornou corpo)")
+            log.error(f"  ✗ WAHA respondeu vazio para {telefone} — mensagem NAO enviada "
+                      f"(motor do WAHA com problema). Lead sera tentado de novo.")
+            return False
+        registrar_lid(telefone, data)
+        msg_id = data.get("id", "?")
+        log.info(f"  ✓ Enviado para {telefone} | msg_id={msg_id}")
         return True
     except requests.HTTPError as e:
         log.error(f"  ✗ Erro HTTP ao enviar para {telefone}: {e.response.text}")
