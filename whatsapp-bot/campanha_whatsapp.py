@@ -161,10 +161,18 @@ def enviar_mensagem(telefone: str, texto: str, cfg: dict) -> bool:
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=15)
         resp.raise_for_status()
-        data   = resp.json()
-        registrar_lid(telefone, data)
-        msg_id = data.get("id", "?")
-        log.info(f"  ✓ Enviado para {telefone} | msg_id={msg_id}")
+        # WAHA pode responder 2xx com corpo vazio ou nao-JSON (varia por versao/engine).
+        # Status 2xx = mensagem aceita; nao marcamos falha so porque nao veio um JSON.
+        try:
+            data = resp.json()
+        except ValueError:
+            data = {}
+        if isinstance(data, dict) and data:
+            registrar_lid(telefone, data)
+            msg_id = data.get("id", "?")
+            log.info(f"  ✓ Enviado para {telefone} | msg_id={msg_id}")
+        else:
+            log.info(f"  ✓ Enviado para {telefone} (WAHA nao retornou corpo)")
         return True
     except requests.HTTPError as e:
         log.error(f"  ✗ Erro HTTP ao enviar para {telefone}: {e.response.text}")
