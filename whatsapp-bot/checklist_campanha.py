@@ -1,21 +1,25 @@
 #!/usr/bin/env python3
 """
-Envia checklist diario da campanha às 11h.
-Informa: campanha iniciada + quantidade de abordagens programadas para o dia.
+Checklist diario da campanha (roda às 11h via Agendador de Tarefas).
+
+- Se a campanha rodou hoje: envia um resumo curto (rodou + abordagens do dia).
+- Se a campanha NAO rodou hoje (ex: PC estava desligado às 10h por queda de energia):
+  envia um alerta com o passo a passo COMPLETO para rodar manualmente, sem depender
+  de ninguem.
+
+Destino: config.json -> "alertas": {"numero": "55..."}
 """
 
 import json
 from datetime import date
 from pathlib import Path
+
 import openpyxl
 import requests
 
 ARQUIVO_LEADS = "leads.xlsx"
 ARQUIVO_LOG = Path("logs") / "campanha.log"
 
-COL_NOME = 1
-COL_TELEFONE = 2
-COL_STATUS = 4
 COL_DATA_ULTIMO = 6
 
 
@@ -36,36 +40,76 @@ def enviar_whatsapp(cfg, numero, texto):
     resp.raise_for_status()
 
 
-def campanha_foi_iniciada_hoje():
-    """Verifica se campanha_whatsapp.py foi executado hoje."""
+def campanha_rodou_hoje():
+    """True se o campanha_whatsapp.py registrou execucao hoje no log.
+
+    Detecta pela data ISO no inicio da linha (ex: '2026-07-23') + o cabecalho
+    'Campanha WhatsApp'. Nao depende de acentos/traco (evita problema de encoding).
+    """
     try:
         linhas = ARQUIVO_LOG.read_text(encoding="utf-8", errors="replace").splitlines()
     except OSError:
         return False
-
-    hoje_br = date.today().strftime("%d/%m/%Y")
-    for linha in linhas[-100:]:  # Verifica últimas 100 linhas
-        if f"Campanha WhatsApp ÔÇö {hoje_br}" in linha or "Campanha WhatsApp" in linha and "Elegíveis:" in linha:
+    hoje_iso = date.today().isoformat()
+    for linha in linhas[-3000:]:  # tail generoso: cobre o dia mesmo apos o verificar_whatsapp
+        if linha.startswith(hoje_iso) and "Campanha WhatsApp" in linha:
             return True
     return False
 
 
-def contar_abordagens_programadas():
-    """Conta quantas pessoas foram abordadas hoje (data_ultimo = hoje)."""
+def contar_abordagens_hoje():
+    """Conta leads com data do ultimo contato = hoje."""
     hoje_iso = date.today().isoformat()
     hoje_br = date.today().strftime("%d/%m/%Y")
-
-    abordagens = 0
+    n = 0
     if Path(ARQUIVO_LEADS).exists():
         wb = openpyxl.load_workbook(ARQUIVO_LEADS, read_only=True)
         ws = wb["Leads"]
         for row in ws.iter_rows(min_row=2, values_only=True):
             ult = str(row[COL_DATA_ULTIMO - 1] or "")[:10]
             if ult in (hoje_iso, hoje_br):
-                abordagens += 1
+                n += 1
         wb.close()
+    return n
 
-    return abordagens
+
+def mensagem_rodou(hoje_br):
+    return [
+        f"✅ *Checklist da Campanha — {hoje_br}*",
+        "",
+        "✓ Campanha rodou hoje",
+        f"✓ Abordagens até agora: *{contar_abordagens_hoje()}*",
+        "",
+        "_Status das 11h_",
+    ]
+
+
+def mensagem_nao_rodou(hoje_br):
+    return [
+        f"⚠️ *Campanha NÃO rodou hoje — {hoje_br}*",
+        "",
+        "A campanha das 10h não foi executada (provável PC desligado ou queda de "
+        "energia no horário). Nenhuma mensagem saiu ainda hoje.",
+        "",
+        "*Para rodar manualmente — passo a passo:*",
+        "",
+        "1) Feche a planilha *leads.xlsx*, se estiver aberta no Excel "
+        "(o programa não consegue salvar com ela aberta).",
+        "",
+        "2) Abra o Prompt de Comando: tecla *Windows*, digite *cmd*, tecla *Enter*.",
+        "",
+        "3) Digite a linha abaixo e tecle *Enter*:",
+        "cd C:\\Projetos\\bot-whatsapp",
+        "",
+        "4) Digite a linha abaixo e tecle *Enter*:",
+        "python campanha_whatsapp.py",
+        "",
+        "5) Aguarde. Vão aparecer linhas de envio ao longo do tempo. "
+        "*Deixe a janela aberta* até o fim do dia (ela envia espaçado).",
+        "",
+        "_Dica: quanto mais cedo rodar, mais espaçados ficam os envios. "
+        "Se já passou muito das 15h, avalie deixar para o próximo dia útil._",
+    ]
 
 
 def main():
@@ -76,23 +120,11 @@ def main():
         return
 
     hoje_br = date.today().strftime("%d/%m/%Y")
-
-    iniciada = campanha_foi_iniciada_hoje()
-    abordagens = contar_abordagens_programadas()
-
-    linhas = [f"✅ *Checklist da Campanha — {hoje_br}*", ""]
-
-    if iniciada:
-        linhas.append("✓ Campanha iniciada")
-    else:
-        linhas.append("✗ Campanha NÃO iniciada")
-
-    linhas.append(f"✓ Abordagens programadas: *{abordagens}*")
-    linhas.append("")
-    linhas.append("_Status das 11h_")
+    rodou = campanha_rodou_hoje()
+    linhas = mensagem_rodou(hoje_br) if rodou else mensagem_nao_rodou(hoje_br)
 
     enviar_whatsapp(cfg, numero_destino, "\n".join(linhas))
-    print(f"✓ Checklist enviado para {numero_destino}")
+    print(f"✓ Checklist enviado para {numero_destino} (campanha rodou hoje: {rodou})")
 
 
 if __name__ == "__main__":
