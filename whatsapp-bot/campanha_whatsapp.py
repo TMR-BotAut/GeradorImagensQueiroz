@@ -391,19 +391,9 @@ def executar_campanha():
         log.warning(" >>> MODO TESTE ATIVO — trava de dia/feriado IGNORADA <<<")
         log.warning(f" Envios limitados a {mt.get('max_envios', 2)} | sem espera de horario")
         log.warning("=" * 60)
-    else:
-        if not dia_liberado_para_envio():
-            log.info("Encerrando sem envios.")
-            return
-        # Trava de horario: nunca enviar depois do fim da janela de envio.
-        # Protege contra execucoes tardias (ex: a tarefa "executar se perdido"
-        # disparando a noite) — que senao mandariam todos os horarios ja vencidos
-        # de uma vez (rajada). Fora da janela, encerra sem enviar; roda no proximo dia.
-        h_fim = datetime.strptime(cfg["campanha"]["hora_fim_envio"], "%H:%M").time()
-        if datetime.now().time() > h_fim:
-            log.info(f"Agora e depois de {cfg['campanha']['hora_fim_envio']} — fora da "
-                     f"janela de envio. Encerrando sem envios (roda amanha no horario).")
-            return
+    elif not dia_liberado_para_envio():
+        log.info("Encerrando sem envios.")
+        return
 
     wb = abrir_planilha(arquivo)
     ws = wb["Leads"]
