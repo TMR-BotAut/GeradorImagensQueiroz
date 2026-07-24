@@ -208,13 +208,21 @@ def alertar_dono(texto: str):
 
 
 # -- Comandos administrativos (dono manda mensagem para o bot) ------------------
+# Numeros autorizados a enviar comandos administrativos (ex: "bloquear 5521...").
+# Inclui o numero de alertas (dono) e o Rodrigo (parceiro).
+NUMEROS_ADMIN = [n for n in (ALERTA_TELEFONE, RODRIGO_TELEFONE) if n]
+
+
 def eh_admin(telefone: str) -> bool:
-    """True se o remetente e o numero de alertas (dono)."""
-    if not ALERTA_TELEFONE:
-        return False
+    """True se o remetente e um dos numeros autorizados (dono ou Rodrigo)."""
     tel = "".join(filter(str.isdigit, telefone))
-    adm = "".join(filter(str.isdigit, ALERTA_TELEFONE))
-    return bool(tel) and (tel == adm or tel[-11:] == adm[-11:])
+    if not tel:
+        return False
+    for adm in NUMEROS_ADMIN:
+        admd = "".join(filter(str.isdigit, adm))
+        if admd and (tel == admd or tel[-11:] == admd[-11:]):
+            return True
+    return False
 
 
 def bloquear_lead_por_comando(numero: str):
@@ -674,18 +682,22 @@ def receber_mensagem():
         msg = payload.get("payload", {})
         msg_id = msg.get("id", "")
         from_me = msg.get("fromMe", False)
+        from_jid = msg.get("from", "") or msg.get("chatId", "")
+        body = msg.get("body", "")
+        texto = body if isinstance(body, str) else ""
 
         if from_me:
+            # Mensagens da propria conta sao ignoradas, EXCETO comandos administrativos
+            # que o dono digita no chat consigo mesmo ("Mensagem para si mesmo").
+            if texto.strip().lower().startswith("bloquear"):
+                tel_self = resolver_telefone(from_jid)
+                if eh_admin(tel_self) and processar_comando_admin(from_jid, texto):
+                    return jsonify({"status": "admin_cmd_self"}), 200
             return jsonify({"status": "ignored"}), 200
 
         if msg_id in PROCESSADOS:
             return jsonify({"status": "duplicate"}), 200
         PROCESSADOS.add(msg_id)
-
-        from_jid = msg.get("from", "") or msg.get("chatId", "")
-
-        body = msg.get("body", "")
-        texto = body if isinstance(body, str) else ""
 
         if not texto:
             return jsonify({"status": "no_text"}), 200
