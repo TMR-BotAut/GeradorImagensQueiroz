@@ -7,6 +7,7 @@ WebhookRespostas -- Servidor WhatsApp via WAHA
 
 import json
 import logging
+import re
 import time
 from datetime import datetime, date
 from pathlib import Path
@@ -502,6 +503,14 @@ def verificar_faq(texto: str):
     return None, None
 
 
+def interpretar_opcao_menu(texto: str):
+    """Se a resposta for so um numero de 1 a 5 (o menu da campanha), retorna
+    'opcao_1'..'opcao_5'. Senao (ex: 'quero auto'), retorna None e cai na
+    classificacao normal. Aceita '2', ' 2 ', '2.', '2)', '2-'."""
+    m = re.fullmatch(r"\s*([1-5])\s*[\.\)\-]?\s*", texto or "")
+    return f"opcao_{m.group(1)}" if m else None
+
+
 def classificar_resposta(texto: str) -> str:
     texto_lower = texto.lower().strip()
     for palavra in CFG["palavras_recusa"]:
@@ -536,8 +545,44 @@ def atualizar_lead(from_jid: str, telefone: str, texto: str, classificacao: str)
             if tel_limpo[-11:] == telefone_limpo[-11:] or tel_limpo == telefone_limpo:
                 row_num = row[0].row
                 nome = row[COL_NOME - 1].value or "?"
+                apelido = str(nome).split()[0] if nome else ""
 
-                if classificacao == STATUS_RECUSOU:
+                if classificacao == "opcao_1":
+                    # 1 = Plano de saude / odonto -> atendimento interno (dono)
+                    novo_status = STATUS_INTERESSADO
+                    enviar_resposta(from_jid, CFG["mensagem"].get(
+                        "menu_saude",
+                        "Perfeito. Sobre plano de saude e odontologico, nossa equipe ja vai te "
+                        "atender por aqui. Pode perguntar o que precisar."))
+                    log.info(f" MENU 1 (Saude/Odonto) -> {nome} - INTERNO")
+                    alertar_dono(
+                        f"🔥 *Lead interessado — Saúde/Odonto*\n"
+                        f"👤 {nome}\n📱 {tel_planilha}\n\nResponda o quanto antes!")
+
+                elif classificacao in ("opcao_2", "opcao_3", "opcao_4"):
+                    # 2/3/4 -> encaminha para o Rodrigo (parceiro)
+                    novo_status = STATUS_INTERESSADO
+                    produto = {
+                        "opcao_2": "Seguro de Auto",
+                        "opcao_3": "Residencial / Vida / Equipamentos",
+                        "opcao_4": "Ainda indeciso (quer ver opcoes)",
+                    }[classificacao]
+                    enviar_resposta(from_jid, CFG["mensagem"].get(
+                        "menu_rodrigo",
+                        "Otimo. Vou te encaminhar para o Rodrigo, nosso especialista, que ja vai te "
+                        "atender. Se preferir, fale direto: (21) 98854-1324."))
+                    notificar_rodrigo(apelido, tel_planilha, produto)
+                    log.info(f" MENU {classificacao[-1]} ({produto}) -> {nome} - RODRIGO")
+
+                elif classificacao == "opcao_5":
+                    # 5 = Nao tem interesse -> sai da lista (recusou), de verdade
+                    novo_status = STATUS_RECUSOU
+                    enviar_resposta(from_jid, CFG["mensagem"].get(
+                        "menu_optout",
+                        "Tudo bem, sem problema. Ja removi seu contato da nossa lista. Obrigado!"))
+                    log.info(f" MENU 5 (Opt-out) -> {nome} - RECUSOU")
+
+                elif classificacao == STATUS_RECUSOU:
                     novo_status = STATUS_RECUSOU
                     log.info(f" RECUSOU -> {nome} ({tel_planilha})")
 
@@ -721,7 +766,8 @@ def receber_mensagem():
             return jsonify({"status": "admin_cmd"}), 200
 
         if lead_existe_na_planilha(telefone):
-            classificacao = classificar_resposta(texto)
+            # Se respondeu so o numero do menu (1-5), vira gatilho; senao, classificacao normal
+            classificacao = interpretar_opcao_menu(texto) or classificar_resposta(texto)
             atualizar_lead(from_jid, telefone, texto, classificacao)
         else:
             processar_desconhecido(from_jid, telefone, texto)

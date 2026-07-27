@@ -36,7 +36,7 @@
   },
 
   "mensagem": {
-    "inicial": "Olá, {nome}! Tudo bem?\n\nMeu nome é [SEU NOME] e trabalho com planos de saúde na região de {cidade}.\n\nGostaria de apresentar algumas opções de cobertura que podem fazer sentido pra você — de forma rápida e sem compromisso.\n\nPosso compartilhar as informações?",
+    "inicial": "Mensagem automática da Queiroz Seguros — corretora de seguros em Teresópolis.\n\nFazemos cotação gratuita de plano de saúde, odonto e seguros (auto, residencial, vida e equipamentos).\n\nResponda com o número da opção e já damos andamento:\n\n1 – Plano de saúde / odontológico\n2 – Seguro de auto\n3 – Residencial, vida ou equipamentos\n4 – Não sei ainda, quero ver as opções\n5 – Não tenho interesse (saio da lista)\n\nSem custo e sem compromisso.",
     "recontato": "Olá, {nome}! Passando novamente para ver se conseguimos um momento. Trabalho com planos de saúde em {cidade} e tenho opções acessíveis. Posso te contar mais?",
     "triagem_saudacao": "Olá! Como vai?! 😊\n\nMeu nome é [SEU NOME], trabalho com seguros e planos de saúde.\n\nMe conta, qual é o seu nome? Pode confirmar se {number} é seu contato preferencial, ou se prefere informar outro?",
     "triagem_saudacao_sem_numero": "Olá! Como vai?! 😊\n\nMeu nome é [SEU NOME], trabalho com seguros e planos de saúde.\n\nMe conta, qual é o seu nome? E qual o melhor número para falar com você?",
@@ -47,7 +47,11 @@
     "triagem_saude_interno": "Ótima escolha, {apelido}! 😊\n\nNossa equipe especializada em *Plano de Saúde e Odontológico* vai entrar em contato com você em breve.\n\nFique à vontade para perguntar qualquer coisa por aqui!",
     "triagem_seguros_encaminhado": "*{nome_parceiro}* é especialista em *{produto}* e vai entrar em contato com você em breve, {apelido}! 😊\n\nCaso prefira, pode chamá-lo diretamente: (21) 98854-1324",
     "triagem_financeiro_encaminhado": "*{nome_parceiro}* é especialista em *{produto}* e vai entrar em contato com você em breve, {apelido}! 😊\n\nCaso prefira, pode chamá-lo diretamente: (21) 98854-1324",
-    "opt_out_confirmacao": "Entendido! Você não receberá mais nossas mensagens por aqui. Obrigado! 😊"
+    "opt_out_confirmacao": "Entendido! Você não receberá mais nossas mensagens por aqui. Obrigado! 😊",
+    "_menu_campanha": "Respostas automaticas quando o lead responde o numero do menu da mensagem inicial (1 a 5).",
+    "menu_saude": "Perfeito. Sobre plano de saúde e odontológico, nossa equipe já vai te atender por aqui. Pode perguntar o que precisar.",
+    "menu_rodrigo": "Ótimo. Vou te encaminhar para o Rodrigo, nosso especialista, que já vai te atender. Se preferir, fale direto: (21) 98854-1324.",
+    "menu_optout": "Tudo bem, sem problema. Já removi seu contato da nossa lista. Obrigado!"
   },
 
   "faq": {
