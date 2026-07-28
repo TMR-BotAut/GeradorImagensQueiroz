@@ -516,6 +516,12 @@ def classificar_resposta(texto: str) -> str:
     for palavra in CFG["palavras_recusa"]:
         if palavra in texto_lower:
             return STATUS_RECUSOU
+    # Negacao + interesse = RECUSA. Pega frases onde a palavra positiva "interess..."
+    # vem precedida de "nao/não" (com ate uma palavra no meio): "nao estou interessada",
+    # "nao tenho interesse", "nao me interessa", "nao interessa". Tambem "sem interesse".
+    # Isso evita o erro de marcar como interessado quem na verdade recusou.
+    if re.search(r"n[ãa]o\s+(\w+\s+)?interess", texto_lower) or "sem interesse" in texto_lower:
+        return STATUS_RECUSOU
     tema_faq, _ = verificar_faq(texto)
     if tema_faq:
         return "faq"
