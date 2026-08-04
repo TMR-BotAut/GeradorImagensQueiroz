@@ -1,0 +1,4 @@
+fonts/*.ttf
+slides_output/
+__pycache__/
+*.pyc
