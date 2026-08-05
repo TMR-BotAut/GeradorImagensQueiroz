@@ -208,6 +208,19 @@ def alertar_dono(texto: str):
         enviar_resposta(ALERTA_TELEFONE, texto)
 
 
+def alertar_contato_desconhecido(from_jid: str, telefone: str, texto: str):
+    """Contato fora da lista escreveu. NAO responde nada automatico ao contato:
+    apenas avisa o dono para que um humano decida e responda pessoalmente.
+    (Substitui o antigo menu de triagem automatico, que ia 'sem criterio'.)"""
+    log.info(f" Contato desconhecido {telefone}: '{texto[:80]}' - avisando dono (sem auto-resposta)")
+    alertar_dono(
+        f"📥 *Mensagem de contato fora da lista*\n"
+        f"📱 {telefone}\n"
+        f"💬 \"{str(texto)[:200]}\"\n\n"
+        f"Responda pessoalmente se fizer sentido."
+    )
+
+
 # -- Comandos administrativos (dono manda mensagem para o bot) ------------------
 # Numeros autorizados a enviar comandos administrativos (ex: "bloquear 5521...").
 # Inclui o numero de alertas (dono) e o Rodrigo (parceiro).
@@ -772,11 +785,14 @@ def receber_mensagem():
             return jsonify({"status": "admin_cmd"}), 200
 
         if lead_existe_na_planilha(telefone):
-            # Se respondeu so o numero do menu (1-5), vira gatilho; senao, classificacao normal
-            classificacao = interpretar_opcao_menu(texto) or classificar_resposta(texto)
+            # Sem menu numerado: toda resposta passa pela classificacao normal
+            # (recusa / FAQ / interesse / revisar). Numeros soltos nao viram gatilho.
+            classificacao = classificar_resposta(texto)
             atualizar_lead(from_jid, telefone, texto, classificacao)
         else:
-            processar_desconhecido(from_jid, telefone, texto)
+            # Contato desconhecido: NAO envia menu automatico. So avisa o dono
+            # para que um humano responda (evita disparo de menu sem criterio).
+            alertar_contato_desconhecido(from_jid, telefone, texto)
 
     except Exception as e:
         log.error(f"Erro ao processar payload: {e}")
