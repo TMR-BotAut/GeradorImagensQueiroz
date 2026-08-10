@@ -8,8 +8,10 @@ import json
 import time
 import random
 import logging
+import subprocess
 import requests
 from datetime import datetime, date, timedelta
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 import openpyxl
@@ -104,6 +106,81 @@ def dia_liberado_para_envio() -> bool:
         return False
 
     return True
+
+
+# ── Conferencia e correcao da data do sistema ─────────────────────────────────
+# O PC pode ter a bateria do relogio (CMOS) fraca: ao ficar sem energia, a data
+# reseta para o passado. Se a campanha rodar com a data errada, ela pula o dia
+# (acha que e sabado/sexta) ou dispara tudo em rajada. Antes de executar, a gente
+# confere a data real na internet e tenta corrigir o relogio do Windows.
+def obter_data_confiavel():
+    """Data/hora real (UTC) a partir do cabecalho HTTP 'Date' de um site confiavel.
+    Nao precisa de biblioteca extra. Retorna datetime (UTC, aware) ou None se offline."""
+    for url in ("https://www.google.com", "https://brasilapi.com.br"):
+        try:
+            resp = requests.head(url, timeout=8)
+            cab = resp.headers.get("Date")
+            if cab:
+                return parsedate_to_datetime(cab)  # ex: "Mon, 10 Aug 2026 13:00:00 GMT"
+        except Exception:
+            continue
+    return None
+
+
+def verificar_e_corrigir_data():
+    """Confere o relogio do sistema contra a internet e tenta corrigir se estiver
+    errado. Retorna (ok, data_sistema, data_real):
+        ok=True  -> pode rodar (data certa, corrigida, ou offline sem como conferir)
+        ok=False -> data errada e NAO foi possivel corrigir; nao rodar hoje.
+    """
+    real = obter_data_confiavel()
+    sistema = date.today()
+
+    if real is None:
+        log.warning("Sem internet para conferir a data — seguindo com o relogio do sistema.")
+        return True, sistema, None
+
+    real_local = (real - timedelta(hours=3)).date()  # Brasil = UTC-3 (sem horario de verao)
+    if sistema == real_local:
+        log.info(f"Data conferida: {sistema} (bate com a internet).")
+        return True, sistema, real_local
+
+    log.error(f"RELOGIO ERRADO: sistema={sistema} vs internet={real_local}. Tentando corrigir com w32tm...")
+    try:
+        subprocess.run(["w32tm", "/resync", "/force"], timeout=30,
+                       capture_output=True, text=True)
+    except Exception as e:
+        log.warning(f"Nao consegui rodar 'w32tm /resync' (precisa de admin?): {e}")
+
+    time.sleep(3)
+    sistema = date.today()
+    if sistema == real_local:
+        log.info(f"Relogio corrigido para {sistema}.")
+        return True, sistema, real_local
+
+    log.error(f"Relogio continua errado apos a correcao (sistema={sistema}, correto={real_local}).")
+    return False, sistema, real_local
+
+
+def avisar_dono(cfg: dict, texto: str):
+    """Manda um aviso curto para o numero de alertas (config alertas.numero) via WAHA.
+    Silencioso se nao houver numero configurado ou se o envio falhar."""
+    numero = str(cfg.get("alertas", {}).get("numero", "") or "")
+    if not numero:
+        return
+    try:
+        base_url = cfg["waha"]["url"].rstrip("/")
+        headers = {"Content-Type": "application/json"}
+        if cfg["waha"].get("api_key"):
+            headers["X-Api-Key"] = cfg["waha"]["api_key"]
+        requests.post(
+            f"{base_url}/api/sendText",
+            headers=headers,
+            json={"session": cfg["waha"]["sessao"], "chatId": f"{numero}@c.us", "text": texto},
+            timeout=15,
+        )
+    except Exception as e:
+        log.warning(f"Nao consegui avisar o dono: {e}")
 
 
 # ── Mapa de id de privacidade (@lid) ──────────────────────────────────────────
@@ -391,9 +468,25 @@ def executar_campanha():
         log.warning(" >>> MODO TESTE ATIVO — trava de dia/feriado IGNORADA <<<")
         log.warning(f" Envios limitados a {mt.get('max_envios', 2)} | sem espera de horario")
         log.warning("=" * 60)
-    elif not dia_liberado_para_envio():
-        log.info("Encerrando sem envios.")
-        return
+    else:
+        # Confere/corrige a DATA antes de decidir o dia. Se o relogio do PC
+        # resetou (bateria CMOS) e nao deu pra corrigir, aborta e avisa o dono —
+        # melhor nao enviar do que enviar no dia errado ou em rajada.
+        ok_data, data_sistema, data_real = verificar_e_corrigir_data()
+        if not ok_data:
+            log.error("Data do sistema nao confiavel — campanha ABORTADA para nao enviar no dia errado.")
+            avisar_dono(
+                cfg,
+                "⚠️ Campanha NÃO rodou hoje: a data do PC está errada "
+                f"(sistema {data_sistema.strftime('%d/%m/%Y')}, correto {data_real.strftime('%d/%m/%Y')}) "
+                "e não consegui corrigir sozinho.\n\n"
+                "Acerte o relógio do Windows (Configurações → Hora e Idioma → "
+                "\"Sincronizar agora\") e, se repetir, troque a bateria do relógio (CMOS)."
+            )
+            return
+        if not dia_liberado_para_envio():
+            log.info("Encerrando sem envios.")
+            return
 
     wb = abrir_planilha(arquivo)
     ws = wb["Leads"]
