@@ -1,5 +1,4 @@
 @echo off
-chcp 65001 >nul
 setlocal
 title Atualizar Bot Queiroz Seguros
 
@@ -29,7 +28,7 @@ for /f "tokens=5" %%a in ('netstat -ano ^| findstr :5000 ^| findstr LISTENING') 
 schtasks /run /tn "Webhook WhatsApp" >nul 2>&1
 
 echo    aguardando o webhook subir...
-timeout /t 5 >nul
+timeout /t 10 >nul
 
 echo.
 echo [3/3] Conferindo se voltou...
