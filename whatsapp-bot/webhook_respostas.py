@@ -208,14 +208,27 @@ def alertar_dono(texto: str):
         enviar_resposta(ALERTA_TELEFONE, texto)
 
 
-def alertar_contato_desconhecido(from_jid: str, telefone: str, texto: str):
+def alertar_contato_desconhecido(from_jid: str, telefone: str, texto: str, nome_contato: str = ""):
     """Contato fora da lista escreveu. NAO responde nada automatico ao contato:
     apenas avisa o dono para que um humano decida e responda pessoalmente.
-    (Substitui o antigo menu de triagem automatico, que ia 'sem criterio'.)"""
-    log.info(f" Contato desconhecido {telefone}: '{texto[:80]}' - avisando dono (sem auto-resposta)")
+    (Substitui o antigo menu de triagem automatico, que ia 'sem criterio'.)
+
+    Se o WhatsApp escondeu o numero (contato so identificado por @lid), NAO mostra
+    o id interno como se fosse telefone: mostra o nome do WhatsApp (quando houver) e
+    avisa que o numero esta oculto, orientando responder na propria conversa.
+    """
+    lid_oculto = from_jid.endswith("@lid") and telefone == from_jid.split("@")[0]
+    if lid_oculto:
+        linha_id = "📱 Número oculto pelo WhatsApp (privacidade) — responda direto na conversa dele"
+    else:
+        linha_id = f"📱 {telefone}"
+    linha_nome = f"👤 {nome_contato}\n" if nome_contato else ""
+
+    log.info(f" Contato desconhecido ({telefone}): '{texto[:80]}' - avisando dono (sem auto-resposta)")
     alertar_dono(
         f"📥 *Mensagem de contato fora da lista*\n"
-        f"📱 {telefone}\n"
+        f"{linha_nome}"
+        f"{linha_id}\n"
         f"💬 \"{str(texto)[:200]}\"\n\n"
         f"Responda pessoalmente se fizer sentido."
     )
@@ -792,7 +805,12 @@ def receber_mensagem():
         else:
             # Contato desconhecido: NAO envia menu automatico. So avisa o dono
             # para que um humano responda (evita disparo de menu sem criterio).
-            alertar_contato_desconhecido(from_jid, telefone, texto)
+            # Pega o nome do WhatsApp (notifyName/pushName) para o aviso ficar util
+            # quando o numero vem oculto (@lid).
+            _data = msg.get("_data") if isinstance(msg.get("_data"), dict) else {}
+            nome_contato = (msg.get("notifyName") or _data.get("notifyName")
+                            or _data.get("pushName") or msg.get("pushName") or "")
+            alertar_contato_desconhecido(from_jid, telefone, texto, nome_contato)
 
     except Exception as e:
         log.error(f"Erro ao processar payload: {e}")
