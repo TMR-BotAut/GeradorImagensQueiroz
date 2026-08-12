@@ -1,0 +1,99 @@
+{
+  "_instrucoes": {
+    "1_copie": "Copie este arquivo para config.json e preencha os valores reais. O config.json fica fora do Git (.gitignore).",
+    "2_waha": "WAHA rodando via Docker em http://localhost:3000",
+    "3_webhook": "No WAHA Dashboard: Settings -> Webhooks -> URL: http://localhost:5000/webhook -> evento: message",
+    "4_telefones": "Telefones na planilha no formato 5521999999999 (55 + DDD + numero, sem espacos)",
+    "5_api_key": "Coloque a api_key real apenas no config.json local. NUNCA commite a chave.",
+    "6_modo_teste": "Com modo_teste.ativo=true: ignora dia/horario e limita os envios. Use durante os testes; em producao deixe false."
+  },
+
+  "waha": {
+    "url": "http://localhost:3000",
+    "sessao": "default",
+    "api_key": ""
+  },
+
+  "alertas": {
+    "_instrucao": "Numero que recebe o resumo diario e os alertas em tempo real de leads interessados (55 + DDD + numero).",
+    "numero": ""
+  },
+
+  "modo_teste": {
+    "ativo": true,
+    "max_envios": 2,
+    "ignorar_dia_horario": true
+  },
+
+  "campanha": {
+    "arquivo_leads": "leads.xlsx",
+    "limite_min_por_dia": 11,
+    "limite_max_por_dia": 17,
+    "hora_inicio_envio": "10:00",
+    "hora_fim_envio": "15:30",
+    "dias_para_recontato": 12,
+    "max_tentativas": 2
+  },
+
+  "mensagem": {
+    "inicial": "Mensagem automática da Queiroz Seguros — corretora de seguros em Teresópolis.\n\nFazemos cotação gratuita de plano de saúde, odonto e seguros (auto, residencial, vida e equipamentos).\n\nResponda com o número da opção e já damos andamento:\n\n1 – Plano de saúde / odontológico\n2 – Seguro de auto\n3 – Residencial, vida ou equipamentos\n4 – Não sei ainda, quero ver as opções\n5 – Não tenho interesse (saio da lista)\n\nSem custo e sem compromisso.",
+    "recontato": "Olá, {nome}! Passando novamente para ver se conseguimos um momento. Trabalho com planos de saúde em {cidade} e tenho opções acessíveis. Posso te contar mais?",
+    "triagem_saudacao": "Olá! Como vai?! 😊\n\nMeu nome é [SEU NOME], trabalho com seguros e planos de saúde.\n\nMe conta, qual é o seu nome? Pode confirmar se {number} é seu contato preferencial, ou se prefere informar outro?",
+    "triagem_saudacao_sem_numero": "Olá! Como vai?! 😊\n\nMeu nome é [SEU NOME], trabalho com seguros e planos de saúde.\n\nMe conta, qual é o seu nome? E qual o melhor número para falar com você?",
+    "triagem_confirma_numero": "Seu melhor número para contato é o *{numero_informado}* (o que você me passou)?\nResponde SIM para confirmar ou se preferir corrigir, me informa o número certo.",
+    "triagem_menu_categoria": "O que você está buscando, {apelido}? 😊\n\n1️⃣ *Plano de Saúde e Odontológico*\n2️⃣ *Seguros* (Veículo, Vida, Residência, Equipamentos, Viagem)\n3️⃣ *Soluções Financeiras* (Consórcio, Financiamento, Previdência, Seguros)\n\nResponde com o número da opção.",
+    "triagem_menu_seguros": "Entendi! Vamos lá com os Seguros. Qual te interessa? (responde o número)\n\n1️⃣ Seguro de Veículo\n2️⃣ Seguro de Vida\n3️⃣ Seguro Residencial\n4️⃣ Seguro de Equipamentos Portáteis\n5️⃣ Seguro de Viagem\n6️⃣ Seguro de Responsabilidade Civil\n7️⃣ Seguro Transporte / Carga\n8️⃣ Seguro Pet",
+    "triagem_menu_financeiro": "Entendi! Vamos lá com Soluções Financeiras. Qual te interessa? (responde o número)\n\n1️⃣ Consórcio\n2️⃣ Financiamento\n3️⃣ Previdência\n4️⃣ Responsabilidade Civil\n5️⃣ Seguro de Vida",
+    "triagem_saude_interno": "Ótima escolha, {apelido}! 😊\n\nNossa equipe especializada em *Plano de Saúde e Odontológico* vai entrar em contato com você em breve.\n\nFique à vontade para perguntar qualquer coisa por aqui!",
+    "triagem_seguros_encaminhado": "*{nome_parceiro}* é especialista em *{produto}* e vai entrar em contato com você em breve, {apelido}! 😊\n\nCaso prefira, pode chamá-lo diretamente: (21) 98854-1324",
+    "triagem_financeiro_encaminhado": "*{nome_parceiro}* é especialista em *{produto}* e vai entrar em contato com você em breve, {apelido}! 😊\n\nCaso prefira, pode chamá-lo diretamente: (21) 98854-1324",
+    "opt_out_confirmacao": "Entendido! Você não receberá mais nossas mensagens por aqui. Obrigado! 😊",
+    "_menu_campanha": "Respostas automaticas quando o lead responde o numero do menu da mensagem inicial (1 a 5).",
+    "menu_saude": "Perfeito. Sobre plano de saúde e odontológico, nossa equipe já vai te atender por aqui. Pode perguntar o que precisar.",
+    "menu_rodrigo": "Ótimo. Vou te encaminhar para o Rodrigo, nosso especialista, que já vai te atender. Se preferir, fale direto: (21) 98854-1324.",
+    "menu_optout": "Tudo bem, sem problema. Já removi seu contato da nossa lista. Obrigado!"
+  },
+
+  "faq": {
+    "_instrucao": "Personalize as respostas com os dados reais da corretora. Os 'gatilhos' sao palavras que ativam cada resposta. [CIDADE] e trocado automaticamente pela cidade do lead. NAO use como gatilho palavras que estao em 'palavras_recusa' (ex: cancelar, pare) — elas marcam recusa antes de chegar na FAQ.",
+    "preco": {
+      "gatilhos": ["quanto custa", "qual o valor", "preço", "preco", "valor", "mensalidade", "quanto fica", "caro", "barato", "orçamento", "orcamento"],
+      "resposta": "Os valores variam conforme a faixa etária e a cobertura escolhida. 😊\n\nPara fazer uma simulação certinha pra você, me confirma:\n• Sua idade (ou as idades de quem vai usar o plano)\n• Se é individual, familiar ou empresarial (MEI/PME)\n\nCom isso eu preparo uma proposta sem compromisso!"
+    },
+    "rede": {
+      "gatilhos": ["rede credenciada", "hospital", "qual hospital", "clinica", "clínica", "exame", "especialista", "laboratorio", "laboratório", "atende em"],
+      "resposta": "Boa pergunta! A rede credenciada varia por operadora e por plano.\n\nMe conta quais hospitais, laboratórios ou médicos são importantes pra você aqui em [CIDADE] que eu verifico em quais planos eles estão na rede. 🏥"
+    },
+    "carencia": {
+      "gatilhos": ["carencia", "carência", "quanto tempo", "prazo", "quando posso usar", "ja posso usar", "já posso usar"],
+      "resposta": "A carência é o tempo de espera até poder usar cada serviço. Em geral:\n• Urgência e emergência: 24 horas\n• Consultas e exames simples: até 30 dias\n• Procedimentos mais complexos e partos: prazos maiores\n\nEm alguns casos, quem já tem plano consegue redução ou isenção de carência. Você tem plano atualmente?"
+    },
+    "documentos": {
+      "gatilhos": ["documento", "documentos", "o que preciso", "como contratar", "como faço", "como faco", "contratar", "contratação", "contratacao", "portabilidade", "carta de permanência"],
+      "resposta": "A contratação é simples e rápida! Normalmente pedimos:\n\n📋 *Documentação Básica:*\n• Documento com foto (RG/CNH) e CPF\n• Comprovante de residência\n• Para MEI/empresa: o CNPJ\n\n🔄 *Se você quer fazer portabilidade* (mudar de plano):\nVocê precisará da *Carta de Permanência* emitida pela sua operadora atual (enquanto seu plano está ativo). A carta deve conter:\n• Data de início do contrato\n• Tipo de acomodação (enfermaria ou apartamento)\n• Nome de todos os beneficiários e dependentes\n• Confirmação de que não há débitos\n\nA operadora tem até 10 dias para fornecer após sua solicitação."
+    },
+    "dependentes": {
+      "gatilhos": ["dependente", "dependentes", "familia", "família", "esposa", "marido", "filho", "filhos", "incluir"],
+      "resposta": "Sim, você pode incluir dependentes, familiares diretos e em alguns casos até familiares agregados. Me informa o vínculo e a idade de quem você quer incluir."
+    },
+    "reembolso": {
+      "gatilhos": ["reembolso", "reembolsa", "fora da rede", "particular", "consultar com meu medico", "meu médico"],
+      "resposta": "Alguns planos oferecem reembolso para consultas e procedimentos fora da rede, com limites por tabela. 💳\n\nSe esse ponto é importante pra você, eu separo as opções com reembolso. Quer que eu inclua isso na sua proposta?"
+    }
+  },
+
+  "palavras_recusa": [
+    "não quero", "nao quero", "não tenho interesse", "nao tenho interesse",
+    "não preciso", "nao preciso", "pare", "remova", "bloquear", "block",
+    "chega", "stop", "cancelar", "descadastrar", "me tire da lista",
+    "não obg", "nao obg", "não, obg", "nao, obg",
+    "não obrigado", "nao obrigado", "não, obrigado", "nao, obrigado",
+    "não obrigada", "nao obrigada", "não, obrigada", "nao, obrigada"
+  ],
+
+  "palavras_interesse": [
+    "quero", "sim", "pode", "manda", "me manda", "quanto", "valor", "preço", "preco",
+    "interesse", "interessado", "interessada", "gostaria", "como funciona",
+    "me liga", "pode ligar", "vou querer", "dependentes", "familia"
+  ]
+}

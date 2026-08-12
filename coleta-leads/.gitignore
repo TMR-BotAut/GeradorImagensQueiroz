@@ -1,0 +1,8 @@
+# Dados gerados pela coleta (não versionar)
+leads_coletados.xlsx
+progresso.json
+coleta.log
+
+# Python
+__pycache__/
+*.pyc
